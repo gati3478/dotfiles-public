@@ -1,0 +1,296 @@
+{
+  // ── identity: Gruvbox Light + Fira Code, matching kitty ──
+  // The typeface is the one thing unified across every tool (kitty, Zed,
+  // Sublime, IDEA); the colour scheme deliberately is not. See the vault's
+  // "Editor Trio Setup" for that stance.
+  "theme": {
+    "mode": "light",
+    "light": "Gruvbox Light",
+    "dark": "Gruvbox Dark"
+  },
+  "icon_theme": {
+    "mode": "light",
+    "light": "Zed (Default)",
+    "dark": "Zed (Default)"
+  },
+  "ui_font_size": 16,
+  "buffer_font_size": 16.0,
+  "buffer_font_family": "Fira Code",
+  "buffer_font_fallbacks": ["FiraCode Nerd Font Mono"],
+  // `calt` is the feature that actually drives Fira Code's ligatures; `dlig`
+  // only adds the discretionary extras. calt defaults to on, but it is stated
+  // here so a future default flip cannot silently kill every ligature.
+  "buffer_font_features": { "calt": true, "dlig": true },
+  "buffer_line_height": "comfortable",
+  "markdown_preview_code_font_family": "FiraCode Nerd Font Mono",
+  "markdown_preview_font_family": "FiraCode Nerd Font",
+
+  // ── caret: underscore everywhere (kitty is `cursor_shape underline`) ──
+  "cursor_shape": "underline",
+
+  // ── rulers 80 / 100 / 120 ──
+  "wrap_guides": [80, 100, 120],
+  "show_wrap_guides": true,
+
+  // ── whitespace ──
+  // "boundary" = leading indentation, trailing spaces, tabs, and any run of
+  // 2+ spaces; single spaces between words stay invisible. Zed's
+  // `show_whitespaces` is a single enum, so this cannot be combined with
+  // "selection" (everything, but only inside a selection) — chosen 08-08-2026
+  // in favour of always-on leading/trailing.
+  "show_whitespaces": "boundary",
+  "whitespace_map": { "space": "·", "tab": "→" },
+
+  // ── the closest Zed has to IDEA's method separators ──
+  // Zed has no horizontal rule between functions and no setting for one.
+  // Sticky scroll solves the underlying problem from the other direction:
+  // the enclosing signature pins to the top of the viewport, so you always
+  // know which function you are inside without needing a divider to count.
+  "sticky_scroll": { "enabled": true },
+
+  // ── save hygiene ──
+  // autosave is `on_focus_change`, NOT `after_delay`: a delayed autosave
+  // marks the buffer clean, after which format_on_save can silently never
+  // run (zed#16588). This way Cmd+S always formats, leaving the editor never
+  // reflows code mid-thought, and nothing is ever lost on tab close.
+  "autosave": "on_focus_change",
+  "format_on_save": "on",
+  "formatter": "auto",
+  "remove_trailing_whitespace_on_save": true,
+  "ensure_final_newline_on_save": true,
+  "tab_size": 2,
+  "hard_tabs": false,
+
+  // ── editor intelligence ──
+  // smartcase: a lowercase query matches case-insensitively, adding any
+  // capital makes it case-sensitive — no modifier to remember.
+  "use_smartcase_search": true,
+  "auto_signature_help": true,
+  "linked_edits": true,
+  "use_autoclose": true,
+  "auto_indent_on_paste": true,
+  "go_to_definition_fallback": "find_all_references",
+  "inline_code_actions": true,
+  "selection_highlight": true,
+  "current_line_highlight": "all",
+  "seed_search_query_from_cursor": "selection",
+  "colorize_brackets": true,
+  "code_lens": "off",
+  "redact_private_values": true,
+  "diagnostics": { "inline": { "enabled": true } },
+  "indent_guides": { "coloring": "indent_aware" },
+  "inlay_hints": {
+    "enabled": true,
+    "show_parameter_hints": true,
+    "show_type_hints": true
+  },
+
+  // ── reading ergonomics ──
+  // A few lines of context stay above/below the caret rather than letting it
+  // ride the very edge of the viewport.
+  "vertical_scroll_margin": 5,
+  "gutter": {
+    "line_numbers": true,
+    "runnables": true,
+    "breakpoints": true,
+    "folds": true,
+    "min_line_number_digits": 3
+  },
+  "minimap": { "show": "auto" },
+  "scrollbar": { "show": "auto" },
+  "hide_mouse": "on_typing_and_action",
+  // In a search/diagnostics multibuffer, double-click opens the real file
+  // instead of selecting a word in the excerpt.
+  "double_click_in_multibuffer": "open",
+
+  // ── workspace ──
+  "restore_on_startup": "last_session",
+  // Closes the tab when the file disappears underneath you — the normal case
+  // is switching git branches, where a stale tab otherwise resurrects a
+  // deleted file on the next save.
+  "close_on_file_delete": true,
+  "session": { "trust_all_worktrees": true },
+  "use_system_window_tabs": false,
+  "tabs": {
+    "close_position": "left",
+    "file_icons": true,
+    "git_status": true
+  },
+  "title_bar": {
+    "show_menus": false,
+    "show_branch_status_icon": false
+  },
+  "status_bar": { "line_endings_button": true },
+  "preview_tabs": {
+    "enabled": true,
+    "enable_preview_from_file_finder": true
+  },
+  "project_panel": {
+    "git_status_indicator": true,
+    "hide_gitignore": true,
+    "dock": "left",
+    "git_status": true
+  },
+
+  // ── search / indexing ──
+  // `include_ignored` deliberately searches gitignored files (.env, local
+  // configs). That is only affordable because the heavy build directories
+  // below are never scanned at all.
+  // ⚠️ file_scan_exclusions REPLACES Zed's defaults rather than extending
+  // them, so the nine stock entries are repeated here on purpose. Dropping
+  // them would put .git and .DS_Store back in the file finder.
+  "search": { "include_ignored": true },
+  "file_scan_exclusions": [
+    "**/.git",
+    "**/.svn",
+    "**/.hg",
+    "**/.jj",
+    "**/CVS",
+    "**/.DS_Store",
+    "**/Thumbs.db",
+    "**/.classpath",
+    "**/.settings",
+    "**/node_modules",
+    "**/target",
+    "**/build",
+    "**/.gradle",
+    "**/dist",
+    "**/.svelte-kit",
+    "**/.turbo",
+    "**/__pycache__",
+    "**/.venv"
+  ],
+
+  // ── git ──
+  "git": {
+    "inline_blame": { "enabled": true, "delay_ms": 600 }
+  },
+
+  // ── keymap: JetBrains, so IDEA muscle memory transfers unchanged ──
+  // Zed 1.14 changed the *default* base_keymap from VSCode to Zed; this is
+  // pinned explicitly so that change cannot drift underneath us.
+  "base_keymap": "JetBrains",
+
+  // ── terminal: same face and caret as kitty ──
+  "terminal": {
+    "copy_on_select": true,
+    "cursor_shape": "underline",
+    "font_family": "FiraCode Nerd Font Mono",
+    "font_size": 16,
+    "line_height": "comfortable"
+  },
+
+  // ── AI ──
+  "agent": {
+    "terminal_init_command": "claude",
+    "favorite_models": [],
+    "play_sound_when_agent_done": "when_hidden",
+    "model_parameters": []
+  },
+  "agent_servers": { "claude-acp": { "type": "registry" } },
+  "agent_buffer_font_family": "FiraCode Nerd Font Mono",
+  "edit_predictions": { "provider": "zed", "mode": "eager" },
+
+  // ── extensions ─────────────────────────────────────────
+  // Pinned so a fresh machine reproduces the set on first launch.
+  // ⚠️ `false` only prevents auto-INSTALL; it never uninstalls. Kotlin sat
+  // here as `false` while the extension was in fact installed and loading —
+  // corrected to `true` on 08-08-2026 to match reality and intent (Zed reads
+  // Kotlin and Gradle .kts; IDEA still owns builds, refactoring and Spring).
+  // Bash, C/C++, CSS, Go, JS/TS, JSON, Markdown, Python, Rust, Tailwind and
+  // YAML are built into Zed and correctly absent from this list.
+  "auto_install_extensions": {
+    "comment": true,
+    "csv": true,
+    "dockerfile": true,
+    "env": true,
+    "gdscript": true,
+    "git-firefly": true,
+    "html": true,
+    "jai": true,
+    "java": true,
+    "kotlin": true,
+    "latex": true,
+    "log": true,
+    "lua": true,
+    "make": true,
+    "markdown-oxide": true,
+    "npm-package-json-checker": true,
+    "playdate": true,
+    "sql": true,
+    "ssh-config": true,
+    "svelte": true,
+    "swift": true,
+    "tombi": true,
+    "xml": true
+  },
+
+  // ── per-language ───────────────────────────────────────
+  "languages": {
+    "Rust": { "tab_size": 4 },
+    "Kotlin": { "tab_size": 4 },
+    // Zed's java extension registers Gradle Kotlin DSL as its OWN language
+    // ("Gradle KTS"), so build.gradle.kts does not inherit the Kotlin block.
+    "Gradle KTS": { "tab_size": 4 },
+    "Java": { "tab_size": 4 },
+    "Python": { "tab_size": 4 },
+    "XML": { "tab_size": 4 },
+    "Svelte": {
+      "tab_size": 2,
+      "code_actions_on_format": { "source.fixAll.eslint": true }
+    },
+    "TypeScript": {
+      "tab_size": 2,
+      "code_actions_on_format": { "source.fixAll.eslint": true }
+    },
+    "Markdown": {
+      "format_on_save": "off",
+      "remove_trailing_whitespace_on_save": false,
+      "show_edit_predictions": false,
+      "soft_wrap": "editor_width",
+      "show_wrap_guides": false,
+      // Prose is the one place the whitespace dots are pure noise.
+      "show_whitespaces": "none"
+    }
+  },
+
+  // ── language servers ───────────────────────────────────
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "check": { "command": "clippy" },
+        "cargo": { "allFeatures": true },
+        // Both of these already match rust-analyzer's own defaults as of
+        // 08-08-2026 (chainingHints on, closureReturnTypeHints "never"), so
+        // this block changes nothing today. It is pinned deliberately: these
+        // are the two hint classes worth an opinion — chaining hints earn
+        // their space in iterator-heavy Rust, closure return hints are noise —
+        // and pinning them means an upstream default flip cannot change the
+        // editor underneath us.
+        "inlayHints": {
+          "chainingHints": { "enable": true },
+          "closureReturnTypeHints": { "enable": "never" }
+        }
+      }
+    },
+    "vtsls": {
+      "settings": {
+        "typescript": {
+          "inlayHints": {
+            "parameterNames": { "enabled": "literals" },
+            "variableTypes": { "enabled": true },
+            "functionLikeReturnTypes": { "enabled": true }
+          }
+        }
+      }
+    }
+  },
+
+  // ── misc ───────────────────────────────────────────────
+  "calls": { "mute_on_join": true },
+  "telemetry": {
+    "diagnostics": true,
+    "metrics": true,
+    "anthropic_retention": true
+  }
+}

@@ -1,0 +1,17 @@
+shell/zshrc	~/.zshrc	link
+shell/zshenv	~/.zshenv	link
+shell/zprofile	~/.zprofile	link
+terminal/kitty/kitty.conf	~/.config/kitty/kitty.conf	link
+terminal/kitty/osaka-jade.conf	~/.config/kitty/osaka-jade.conf	link
+terminal/kitty/save-session.sh	~/.config/kitty/save-session.sh	link	0755
+terminal/tmux/tmux.conf	~/.config/tmux/tmux.conf	link
+terminal/bat/config	~/.config/bat/config	link
+prompt/starship.toml	~/.config/starship.toml	link
+prompt/cship.toml	~/.config/cship.toml	link
+git/gitconfig	~/.gitconfig	link
+bin/mcp-context7.sh	~/.local/bin/mcp-context7.sh	link	0755
+editor/zed/settings.json	~/.config/zed/settings.json	link
+editor/zed/keymap.json	~/.config/zed/keymap.json	link
+editor/zed/tasks.json	~/.config/zed/tasks.json	link
+editor/sublime/Preferences.sublime-settings	~/Library/Application Support/Sublime Text/Packages/User/Preferences.sublime-settings	copy
+editor/sublime/Package Control.sublime-settings	~/Library/Application Support/Sublime Text/Packages/User/Package Control.sublime-settings	copy

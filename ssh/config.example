@@ -1,0 +1,51 @@
+# Example patterns. The real config is private — it names live hosts.
+
+# A remote you hit with many short `ssh host '<cmd>'` calls.
+# ControlMaster reuses one TCP+auth handshake, which is the difference
+# between ~1s and ~150ms per call. Cite the floor, not a hope: a
+# multiplexed command still costs ~2 RTT, so the round-trip time to the
+# host is the hard lower bound — a specific millisecond figure that
+# nobody else can reproduce makes the whole comment suspect.
+Host example-remote
+  HostName remote.example.com
+  User youruser
+  IdentityFile ~/.ssh/id_ed25519
+  AddKeysToAgent yes
+  UseKeychain yes
+  ControlMaster auto
+  ControlPath ~/.ssh/cm-%r@%h:%p
+  ControlPersist 10m
+  # Without these, a NAT idle-timeout is indistinguishable from a hung command.
+  ServerAliveInterval 30
+  ServerAliveCountMax 3
+
+# Same host, but carrying port forwards.
+# ControlPath none is deliberate: sharing the plain host's master would bind
+# these forwards to that session's lifetime instead of this one's, so closing
+# an unrelated shell would silently kill the tunnel.
+# ExitOnForwardFailure makes an already-bound local port a loud failure rather
+# than a connection that quietly has no forwards.
+Host example-remote-tunnel
+  HostName remote.example.com
+  User youruser
+  IdentityFile ~/.ssh/id_ed25519
+  ControlMaster no
+  ControlPath none
+  ExitOnForwardFailure yes
+  LocalForward 4000 127.0.0.1:4000
+
+# A LAN host reached over a fast, low-latency link (as opposed to the WAN
+# hosts above). ServerAlive* can be tightened — a dead link should surface
+# fast rather than hang a deploy — without the NAT/idle-timeout tradeoff
+# that governs the WAN case.
+Host example-lan-host
+  HostName example-lan-host.local
+  User youruser
+  IdentityFile ~/.ssh/id_ed25519
+  AddKeysToAgent yes
+  UseKeychain yes
+  ControlMaster auto
+  ControlPath ~/.ssh/cm-%r@%h:%p
+  ControlPersist 10m
+  ServerAliveInterval 15
+  ServerAliveCountMax 3

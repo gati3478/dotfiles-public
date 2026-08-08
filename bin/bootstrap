@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# Adopt this setup on a fresh machine.
+#
+# Asks for the handful of values that are personal, writes them to a local
+# overlay, patches the one config kitty itself cannot template, then
+# symlinks the rest into place. Never overwrites without a backup (dot-apply
+# owns that), and never runs as root.
+set -euo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [ "$(id -u)" -eq 0 ]; then
+  echo "bootstrap: refusing to run as root — this installs user files" >&2
+  exit 1
+fi
+
+echo "== dependencies =="
+missing=""
+for tool in kitty zsh starship fzf zoxide eza bat git; do
+  command -v "$tool" >/dev/null 2>&1 || missing="$missing $tool"
+done
+# zsh-syntax-highlighting and zsh-autosuggestions are Homebrew formulae,
+# not commands on PATH — `command -v` can't see them, so they need their
+# own check. shell/zshrc guards both `source` lines, so a missing formula
+# degrades to a silent no-op rather than an error on every shell — but an
+# adopter who actually wants the plugins should still be told to install
+# them, same as every other dependency here.
+brew_missing=""
+if command -v brew >/dev/null 2>&1; then
+  for formula in zsh-syntax-highlighting zsh-autosuggestions; do
+    brew list --formula "$formula" >/dev/null 2>&1 || brew_missing="$brew_missing $formula"
+  done
+else
+  brew_missing=" zsh-syntax-highlighting zsh-autosuggestions"
+fi
+if [ -n "$missing$brew_missing" ]; then
+  echo "Missing:$missing$brew_missing"
+  echo "On macOS:  brew install${missing}${brew_missing}"
+  echo "The font is separate:  brew install --cask font-fira-code-nerd-font"
+  printf 'Continue anyway? [y/N] '
+  read -r reply
+  [ "$reply" = "y" ] || exit 1
+fi
+
+echo
+echo "== your details =="
+printf 'Full name for git commits: '   ; read -r git_name
+printf 'Email for git commits: '       ; read -r git_email
+
+cat > "$HOME/.gitconfig.local" <<EOF
+[user]
+	name = $git_name
+	email = $git_email
+EOF
+echo "wrote ~/.gitconfig.local"
+
+# The shell overlays are optional: the guards in zshenv/zprofile make an
+# absent file a no-op, so an adopter with no work split needs neither.
+touch "$HOME/.zshenv.local" "$HOME/.zprofile.local"
+echo "wrote empty ~/.zshenv.local and ~/.zprofile.local (fill in if needed)"
+
+echo
+echo "== tab-title path =="
+# terminal/kitty/kitty.conf's tab_title_template abbreviates the working
+# directory to '~' via a Python .replace() call inside kitty's own config
+# language. kitty.conf is not shell — that expression has no access to
+# $HOME or any other env var, only the template's own data fields — so the
+# home directory to collapse has to be a literal, authored for the original
+# machine (/Users/gati3478). Rewrite it here instead, once, for this one.
+#
+# Idempotent: after the first run the literal is gone, so a re-run's grep
+# finds nothing and this is a no-op. Uses a temp file + mv rather than
+# sed -i, which takes an extra argument on macOS (BSD sed) and none on
+# Linux (GNU sed) — portable either way.
+KITTY_CONF="$REPO/terminal/kitty/kitty.conf"
+ORIGINAL_HOME="/Users/gati3478"
+if [ -f "$KITTY_CONF" ] && grep -q "$ORIGINAL_HOME" "$KITTY_CONF"; then
+  tmp="$(mktemp)"
+  sed "s|$ORIGINAL_HOME|$HOME|g" "$KITTY_CONF" > "$tmp" && mv "$tmp" "$KITTY_CONF"
+  echo "patched tab_title_template in terminal/kitty/kitty.conf for \$HOME=$HOME"
+else
+  echo "tab_title_template already patched (or kitty.conf not found) — skipped"
+fi
+
+echo
+echo "== deploying =="
+"$REPO/bin/dot-apply"
+
+echo
+echo "Done. Open a new terminal window."
+echo "Verify with: $REPO/bin/dot-doctor"

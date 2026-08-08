@@ -1,0 +1,191 @@
+# Runs only in interactive shells. PATH and login-only setup live in
+# .zshenv and .zprofile respectively.
+
+# ── tmux (SSH only — Kitty is primary locally) ───────────
+# Auto-attach for SSH sessions
+if command -v tmux &>/dev/null && [[ -z "$TMUX" && $- == *i* && -n "$SSH_CONNECTION" ]]; then
+  exec tmux new-session -A -s remote
+fi
+
+# ── History ──────────────────────────────────────────────
+HISTFILE=~/.zsh_history
+HISTSIZE=100000
+SAVEHIST=100000
+setopt SHARE_HISTORY          # Share history across all zsh sessions
+setopt HIST_IGNORE_ALL_DUPS   # Remove older duplicate when new entry added
+setopt HIST_IGNORE_SPACE      # Don't record commands starting with space
+setopt HIST_REDUCE_BLANKS     # Remove extra blanks from history
+setopt HIST_VERIFY            # Show expanded history before executing
+setopt EXTENDED_HISTORY       # Save timestamp with each entry
+setopt HIST_FIND_NO_DUPS      # Skip duplicates during Ctrl+R search
+
+# ── Shell Options ────────────────────────────────────────
+# Must precede the Completion block below: its 24h dump-staleness check
+# uses the (#q…) glob-qualifier syntax, which requires EXTENDED_GLOB to
+# be recognized at all. Without it, "#" has no special meaning, so the
+# whole $ZCOMPDUMP(#qN.mh+24) token is just literal text concatenated
+# onto the path — never empty, so the guard silently never fires and
+# `compinit -C` (the cached fast path) never runs.
+setopt EXTENDED_GLOB           # required by the (#q…) check in Completion
+setopt AUTO_CD                # cd by typing directory name alone
+setopt CORRECT                # Spelling correction for commands
+setopt INTERACTIVE_COMMENTS   # Allow comments in interactive shell
+setopt NO_BEEP                # Silence terminal bell
+setopt GLOB_DOTS              # Include dotfiles in glob patterns
+
+# ── Completion ───────────────────────────────────────────
+fpath=(~/.docker/completions $fpath)
+autoload -Uz compinit
+# Versioned dump: a zsh upgrade changes the dump format, and `compinit -C`
+# skips the staleness check, so an unversioned dump can produce broken
+# completions for up to 24h after an upgrade. The version suffix makes an
+# upgrade produce a cache miss instead of a stale hit.
+ZCOMPDUMP="$HOME/.zcompdump-$ZSH_VERSION"
+# Rebuild if older than 24h, otherwise use the cached fast path.
+# Full compinit costs ~0.22s; the cached path ~0.02s.
+if [[ -n $ZCOMPDUMP(#qN.mh+24) ]]; then
+  compinit -d "$ZCOMPDUMP"
+else
+  compinit -C -d "$ZCOMPDUMP"
+fi
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+
+# ── ssh/scp completion: offer hosts, not macOS service accounts ──────────
+# `ssh <TAB>` was offering 146 candidates, ~129 of them macOS daemon users
+# (_mds_stores, _amavisd, _spotlight …) pulled from the user database, which
+# buried the 8 host aliases that actually exist. Measured 03-08-2026:
+#   dscl . -list /Users | grep -c '^_'   ->  129
+# Two independent fixes, because two completers contribute candidates:
+#   1. stop offering system accounts as usernames at all
+#   2. name the hosts explicitly, taken from ~/.ssh/config rather than from
+#      known_hosts — known_hosts is the wrong source (hashed entries are
+#      unreadable, and it lists hosts you visited once and never again)
+zstyle ':completion:*:*:*:users' ignored-patterns '_*' daemon nobody root
+_ssh_config_hosts=(${(f)"$(awk '/^[[:space:]]*[Hh]ost[[:space:]]/{for(i=2;i<=NF;i++) if ($i !~ /[*?!]/) print $i}' ~/.ssh/config 2>/dev/null)"})
+zstyle ':completion:*:(ssh|scp|sftp|rsync|mosh|ssh-copy-id):*' hosts $_ssh_config_hosts
+
+# ── Key Bindings ─────────────────────────────────────────
+# history-search-backward matches on the FIRST WORD of the buffer only, so
+# `git com` + Up searched for `git` and discarded `com` — it never did the
+# prefix search its old comment claimed. history-beginning-search-backward
+# matches the line up to the cursor, which is the intended behaviour.
+# The -end variants additionally park the cursor at end of line rather
+# than leaving it mid-line where the match happened to start.
+autoload -Uz history-search-end
+zle -N history-beginning-search-backward-end history-search-end
+zle -N history-beginning-search-forward-end  history-search-end
+bindkey '^[[A' history-beginning-search-backward-end   # Up:   prefix search
+bindkey '^[[B' history-beginning-search-forward-end    # Down: prefix search
+
+# ── Python (pyenv) ───────────────────────────────────────
+# PATH-only init runs in .zprofile (login shells). Here we add the
+# interactive shell function and virtualenv auto-activation.
+if command -v pyenv >/dev/null 2>&1; then
+  eval "$(pyenv init -)"
+  if command -v pyenv-virtualenv-init >/dev/null 2>&1; then
+    eval "$(pyenv virtualenv-init -)"
+  fi
+fi
+
+# ── Java ─────────────────────────────────────────────────
+# Default JDK is set once per login in .zprofile.
+# `jset N` switches versions interactively (e.g. `jset 17`).
+jset() {
+  local v="${1:?usage: jset <java-version>}"
+  local home actual
+  home="$(/usr/libexec/java_home -v "$v" 2>/dev/null)" || {
+    print -u2 "jset: no JDK matching '$v' (try '/usr/libexec/java_home -V')"
+    return 1
+  }
+  # macOS java_home silently falls back to the latest installed JDK on a
+  # non-matching version (exit 0). Confirm the resolved JDK's major version
+  # actually matches the request before exporting.
+  actual="$(awk -F'"' '/^JAVA_VERSION=/{print $2}' "$home/release" 2>/dev/null)"
+  if [[ "${v%%.*}" != "${actual%%.*}" ]]; then
+    print -u2 "jset: '$v' not installed — java_home fell back to JDK ${actual:-?}"
+    return 1
+  fi
+  # Drop the previous JDK's bin from PATH so repeated switches don't
+  # leave stale entries (typeset -U dedupes identical entries only).
+  if [[ -n "$JAVA_HOME" ]]; then
+    path=("${(@)path:#$JAVA_HOME/bin}")
+  fi
+  export JAVA_HOME="$home"
+  path=("$JAVA_HOME/bin" $path)
+}
+
+# ── Modern CLI Tools ─────────────────────────────────────
+# fzf's --zsh init binds ZLE widgets; guard for non-TTY interactive shells
+# (e.g. Claude Code's `zsh -i -c`) where `setopt zle` errors out.
+if [[ -t 1 ]]; then
+  source <(fzf --zsh)
+fi
+eval "$(zoxide init zsh)"               # z <partial-path> to jump directories
+alias ls="eza --icons=auto"
+alias ll="eza -la --icons=auto --git"
+alias lt="eza -T --icons=auto --git-ignore"
+alias t='tmux new-session -A -s remote'  # Start/attach tmux for remote access
+alias hg='kitty +kitten hyperlinked_grep'  # Clickable grep results (open in editor)
+alias fp='kitty +kitten choose-files'      # Keyboard file picker with previews
+icloud=~/Library/Mobile\ Documents/com~apple~CloudDocs
+obsidian=~/Library/Mobile\ Documents/iCloud~md~obsidian/Documents
+obsidian_songbird=~/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Songbird
+
+# ── Zsh Plugins ──────────────────────────────────────────
+# Guarded: a fresh adopter without `brew install zsh-autosuggestions` gets
+# a silent no-op here instead of a "no such file" error on every
+# interactive shell. bootstrap's dependency check names the formula so it
+# gets installed before this ever needs to fall back.
+[ -f /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh ] && \
+  source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+
+# ── Starship Prompt ──────────────────────────────────────
+eval "$(starship init zsh)"
+
+# ── SDKMAN (lazy) ────────────────────────────────────────
+# Spring Boot CLI is on PATH via .zprofile. Init only loads if you
+# actually invoke `sdk` (install/upgrade/list/use).
+export SDKMAN_DIR="$HOME/.sdkman"
+sdk() {
+  unfunction sdk
+  source "$SDKMAN_DIR/bin/sdkman-init.sh"
+  sdk "$@"
+}
+
+# ── nvm (lazy) ───────────────────────────────────────────
+# Default node goes on PATH directly (newest installed version via numeric
+# glob sort); nvm.sh (~350ms) only loads if `nvm` itself is invoked —
+# same lazy pattern as sdk above.
+export NVM_DIR="$HOME/.nvm"
+_nvm_bin=($NVM_DIR/versions/node/*/bin(Nn[-1]))
+[[ -n "$_nvm_bin" ]] && path=($_nvm_bin $path)
+unset _nvm_bin
+nvm() {
+  unfunction nvm
+  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+  [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
+  nvm "$@"
+}
+
+# Re-front the Claude account shim (the node-bin prepend above can land ahead
+# of it; this keeps the shim ahead of the real binary). See ~/.zshenv.
+path=("$HOME/.local/share/claude-switch/bin" $path)
+
+# Machine-specific overrides. Absent on a fresh clone, so the guard
+# below is a no-op — nothing to track here today.
+[ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"
+
+# ── zsh-syntax-highlighting — MUST BE LAST ───────────────
+# Upstream: "must be sourced after all custom widgets have been created
+# (i.e. after all `zle -N`)". `starship init zsh` creates a
+# zle-keymap-select widget, so sourcing z-sy-h before starship left that
+# widget unwrapped. Harmless on z-sy-h 0.8.0 + zsh 5.9, which prefer the
+# order-insensitive zle-line-pre-redraw hook — but the widget-wrapping
+# fallback path still exists, and the rule costs nothing to honour.
+# Nothing that creates a ZLE widget may be added below this line.
+# Guarded like zsh-autosuggestions above: absent -> silent no-op, not a
+# "no such file" error on a fresh adopter's shell.
+[ -f /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ] && \
+  source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh

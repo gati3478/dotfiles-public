@@ -1,0 +1,56 @@
+# Runs for EVERY zsh (login, interactive, scripts, `zsh -c`).
+# Keep minimal — anything slow here multiplies across every subshell.
+
+# Dedupe PATH entries automatically — covers .zprofile and .zshrc additions.
+typeset -U path PATH
+
+# User-local binaries (used by both interactive and non-interactive shells).
+path=("$HOME/.local/bin" $path)
+
+# Cargo binaries available in non-interactive zsh (build scripts, hooks).
+# Guarded so removing rust doesn't break every shell.
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
+# ── Claude Code: per-directory account selection (concurrency-safe) ─────────
+# A PATH shim (~/.local/share/claude-switch/bin/claude) auto-selects the WORK
+# account under the work-tree prefix (CC_WORK_PREFIX) and PERSONAL elsewhere — for every
+# launch that resolves `claude` via PATH: interactive, `zsh -c`, and scripts/
+# subprocesses that inherit this PATH. It mirrors manage-once assets (skills/
+# plugins/agents/commands/hooks/workflows/settings.json/CLAUDE.md) from
+# ~/.claude into ~/.claude-work on launch. Each account keeps its own
+# .claude.json/projects/sessions/history, so personal + work run CONCURRENTLY.
+# Per-account only: the login + .claude.json (MCP user servers + connectors) +
+# settings.local.json (runtime permission grants). The shim has the full logic.
+# (.zshrc re-prepends this so it also wins in login/interactive shells where the
+# installer re-fronts ~/.local/bin.) NOT reachable: GUI .app / cron launches —
+# for those set CC_ACCOUNT=work in the launcher's environment.
+path=("$HOME/.local/share/claude-switch/bin" $path)
+
+# Force a specific account from any directory (calls the shim directly, so it
+# works even if PATH ordering ever changes):
+claude-work()     { CC_ACCOUNT=work     "$HOME/.local/share/claude-switch/bin/claude" "$@"; }
+claude-personal() { CC_ACCOUNT=personal "$HOME/.local/share/claude-switch/bin/claude" "$@"; }
+# Resync: refresh asset links AND re-seed MCP user servers personal → work.
+claude-sync-work() {
+  CC_SYNC_ONLY=1 "$HOME/.local/share/claude-switch/bin/claude" || return 1
+  local dst="$HOME/.claude-work/.claude.json"
+  [ -f "$dst" ] || print '{}' > "$dst"
+  if command -v jq >/dev/null 2>&1 && [ -f "$HOME/.claude.json" ]; then
+    local ms tmp
+    ms="$(jq -c '.mcpServers // {}' "$HOME/.claude.json" 2>/dev/null)" || { print -u2 "claude-sync-work: cannot read ~/.claude.json"; return 1; }
+    tmp="$(mktemp)" || return 1
+    if jq --argjson ms "${ms:-{}}" '.mcpServers = ((.mcpServers // {}) + $ms)' "$dst" > "$tmp" 2>/dev/null; then
+      mv "$tmp" "$dst"
+      print "claude-sync-work: linked assets + merged mcpServers → $HOME/.claude-work"
+    else
+      rm -f "$tmp"
+      print -u2 "claude-sync-work: linked assets; MCP merge skipped (work .claude.json left intact)"
+    fi
+  else
+    print "claude-sync-work: linked assets (jq missing: MCP servers not synced)"
+  fi
+}
+
+# Machine-specific overrides (work paths, employer-specific values).
+# Absent on a fresh clone, which is why the guard is here.
+[ -f "$HOME/.zshenv.local" ] && source "$HOME/.zshenv.local"

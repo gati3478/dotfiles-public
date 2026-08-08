@@ -1,0 +1,122 @@
+// Global Zed tasks — Cmd+Shift+X (JetBrains keymap: "Run Anything").
+//
+// These are deliberately global rather than per-project: the task modal is
+// fuzzy-searched, so a Rust task in a Svelte project costs a few characters
+// of typing, not a wrong result. Anything genuinely project-specific belongs
+// in that repo's own .zed/tasks.json, which takes precedence.
+//
+// Every task sets "save": "all". Autosave is `on_focus_change`, so a task
+// spawned straight from the keyboard would otherwise run against a stale file
+// on disk — this is the pairing that makes that autosave mode safe.
+//
+// Only $ZED_WORKTREE_ROOT / $ZED_FILE / $ZED_DIRNAME are used here — that is a
+// choice, not a limit.
+//
+// ⚠️ Corrected 08-08-2026. This comment previously claimed $ZED_STEM and
+// $ZED_SYMBOL "are not" present in 1.14.2. They are (crates/task/src/task.rs —
+// `VariableName::Stem` / `::Symbol`). The claim came from grepping the Zed
+// binary's string table, which cannot see them: those names are BUILT at
+// runtime by concatenating a prefix constant with "STEM"/"SYMBOL", so no such
+// literal is ever stored. That method proves a string is PRESENT; it can never
+// prove one is ABSENT.
+[
+  // ── Rust ────────────────────────────────────────────────
+  {
+    "label": "rust: check",
+    "command": "cargo check --all-targets",
+    "save": "all"
+  },
+  {
+    "label": "rust: clippy (deny warnings)",
+    "command": "cargo clippy --all-targets --all-features -- -D warnings",
+    "save": "all"
+  },
+  {
+    // nextest rather than `cargo test`: it is installed, it is faster, and it
+    // reports per-test rather than per-binary.
+    "label": "rust: test",
+    "command": "cargo nextest run",
+    "save": "all"
+  },
+  {
+    "label": "rust: test (this file's directory)",
+    "command": "cargo nextest run",
+    "cwd": "$ZED_DIRNAME",
+    "save": "all"
+  },
+  {
+    "label": "rust: fmt",
+    "command": "cargo fmt --all",
+    "save": "all",
+    "reveal": "no_focus",
+    "hide": "on_success"
+  },
+  {
+    "label": "rust: run",
+    "command": "cargo run",
+    "save": "all",
+    "allow_concurrent_runs": false
+  },
+  {
+    "label": "rust: doc (open)",
+    "command": "cargo doc --no-deps --open",
+    "save": "none",
+    "reveal": "no_focus"
+  },
+  {
+    // Supply-chain pass. Both binaries are installed; `deny` also covers
+    // licences and duplicate versions, which `audit` does not.
+    "label": "rust: audit + deny",
+    "command": "cargo audit && cargo deny check",
+    "save": "none"
+  },
+  {
+    // Interactive snapshot review — needs its own terminal to take keystrokes.
+    "label": "rust: insta review",
+    "command": "cargo insta review",
+    "use_new_terminal": true,
+    "save": "all"
+  },
+
+  // ── Node / SvelteKit ────────────────────────────────────
+  {
+    "label": "node: dev",
+    "command": "npm run dev",
+    "save": "all",
+    "allow_concurrent_runs": false
+  },
+  {
+    "label": "node: build",
+    "command": "npm run build",
+    "save": "all"
+  },
+  {
+    "label": "node: test",
+    "command": "npm test",
+    "save": "all"
+  },
+  {
+    "label": "node: test (current file)",
+    "command": "npx vitest run \"$ZED_FILE\"",
+    "save": "all"
+  },
+  {
+    "label": "node: check (svelte-check)",
+    "command": "npm run check",
+    "save": "all"
+  },
+
+  // No Gradle tasks here, deliberately. Zed reads Kotlin and Gradle KTS; IDEA
+  // owns builds, refactoring, Spring tooling and debugging. A ./gradlew task
+  // in this list would contradict that division for no gain.
+
+  // ── Git ─────────────────────────────────────────────────
+  {
+    // TUI: own terminal tab, and -p pins it to the worktree rather than
+    // whatever directory the terminal happened to be in.
+    "label": "lazygit",
+    "command": "lazygit -p \"$ZED_WORKTREE_ROOT\"",
+    "use_new_terminal": true,
+    "save": "all"
+  }
+]

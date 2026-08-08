@@ -1,0 +1,45 @@
+# Osaka Jade — Starship prompt
+format = "$username$directory$git_branch$git_status$python$java$rust$nodejs$cmd_duration$character"
+
+[cmd_duration]
+min_time = 2000
+format = "took [$duration]($style) "
+style = "bold #E5C736"
+
+[username]
+format = "[$user]($style) "
+style_user = "bold #E5C736"
+style_root = "bold #FF5345"
+show_always = true
+
+[directory]
+format = "[$path]($style) "
+style = "bold #D7C995"
+truncation_length = 3
+
+[character]
+success_symbol = "[❯](bold #549e6a)"
+error_symbol = "[❯](bold #FF5345)"
+
+[git_branch]
+format = "on [$symbol$branch]($style) "
+style = "bold #509475"
+
+[git_status]
+style = "#E5C736"
+
+[python]
+format = "via [$symbol($version)]($style) "
+style = "#2DD5B7"
+
+[java]
+format = "via [$symbol($version)]($style) "
+style = "#FF5345"
+
+[rust]
+format = "via [$symbol($version)]($style) "
+style = "#D7C995"
+
+[nodejs]
+format = "via [$symbol($version)]($style) "
+style = "#549e6a"

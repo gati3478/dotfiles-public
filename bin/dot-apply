@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# Deploy per manifest.tsv. Idempotent.
+#
+# Modes:
+#   link  a symlink into the repo — editing the repo IS editing the live file
+#   copy  the application rewrites this file itself, so it is copied and
+#         reconciled by dot-pull rather than linked
+set -euo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MANIFEST="$REPO/manifest.tsv"
+DRY_RUN="${1:-}"
+
+# The manifest installs USER files: ~/.zshrc, ~/.config, ~/.local. Running as
+# root would create root-owned files in a user's home, which then fail to be
+# rewritten by the tools that own them.
+if [ "$(id -u)" -eq 0 ]; then
+  echo "dot-apply: refusing to run as root — this installs user files" >&2
+  exit 1
+fi
+
+expand() { printf '%s' "${1/#\~/$HOME}"; }
+
+applied=0
+rows_seen=0
+while IFS=$'\t' read -r src tgt mode perms; do
+  case "$src" in ''|'#'*) continue ;; esac
+  rows_seen=$((rows_seen + 1))
+  abs_src="$REPO/$src"
+  abs_tgt="$(expand "$tgt")"
+
+  if [ ! -e "$abs_src" ]; then
+    echo "MISSING SOURCE  $src" >&2
+    exit 1
+  fi
+
+  # Never clobber a real directory. A file we can back up; a populated
+  # directory is someone else's data.
+  if [ -d "$abs_tgt" ] && [ ! -L "$abs_tgt" ]; then
+    echo "REFUSING        $tgt is a real directory" >&2
+    exit 1
+  fi
+
+  if [ -n "$DRY_RUN" ]; then
+    echo "would $mode      $tgt"
+    continue
+  fi
+
+  mkdir -p "$(dirname "$abs_tgt")"
+
+  case "$mode" in
+    link)
+      # Back up a pre-existing REGULAR file before replacing it with a link.
+      if [ -f "$abs_tgt" ] && [ ! -L "$abs_tgt" ]; then
+        cp "$abs_tgt" "$abs_tgt.pre-dotfiles"
+        echo "backed up       $tgt -> $tgt.pre-dotfiles"
+      fi
+      ln -sfn "$abs_src" "$abs_tgt"
+      ;;
+    copy)
+      cp "$abs_src" "$abs_tgt"
+      ;;
+    *)
+      echo "UNKNOWN MODE    $mode for $src" >&2
+      exit 1
+      ;;
+  esac
+
+  [ -n "${perms:-}" ] && chmod "$perms" "$abs_tgt"
+  echo "$mode            $tgt"
+  applied=$((applied + 1))
+done < "$MANIFEST"
+
+# Guards the classic `while read` gotcha (same fix as dot-doctor/dot-pull):
+# a manifest missing its trailing newline silently drops its last row from
+# this loop entirely — `read` still populates the row's variables but
+# returns non-zero on that final line, so the loop condition fails before
+# the body runs. dot-apply is the tool that actually DEPLOYS the manifest;
+# unlike dot-doctor (verifies) and dot-pull (reconciles copy-mode files),
+# a silent short-deploy here means a stale symlink or missing file stays
+# live with no error and an "N entries applied" count that looks correct.
+expected_rows=$(awk -F'\t' '$1 !~ /^($|#)/ { c++ } END { print c+0 }' "$MANIFEST")
+if [ "$rows_seen" -ne "$expected_rows" ]; then
+  echo "dot-apply: refusing — processed $rows_seen manifest row(s) but $MANIFEST has $expected_rows — a row was silently skipped (missing trailing newline?)" >&2
+  exit 1
+fi
+
+echo "--"
+echo "$applied entries applied"

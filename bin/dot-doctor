@@ -1,0 +1,196 @@
+#!/usr/bin/env bash
+# Verify the deployed state against manifest.tsv, plus semantic checks.
+#
+# Enumerates every unit; never prints a tally. A count drifts between the
+# checker and the checked and nobody notices — the vault has four separate
+# instances of a doctor count going stale in under a week. Read the state
+# off the run, not off a number.
+set -uo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MANIFEST="$REPO/manifest.tsv"
+FAILED=0
+source "$REPO/bin/lib/publish-fingerprint.sh"
+
+ok()   { printf '  \033[32mok\033[0m    %s\n' "$1"; }
+bad()  { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; FAILED=1; }
+warn() { printf '  \033[33mwarn\033[0m  %s\n' "$1"; }
+
+expand() { printf '%s' "${1/#\~/$HOME}"; }
+
+echo "== manifest rows =="
+rows_seen=0
+while IFS=$'\t' read -r src tgt mode perms; do
+  case "$src" in ''|'#'*) continue ;; esac
+  rows_seen=$((rows_seen + 1))
+  abs_tgt="$(expand "$tgt")"
+  case "$mode" in
+    link)
+      if [ ! -L "$abs_tgt" ]; then
+        bad "$tgt is not a symlink"
+      elif [ ! -e "$abs_tgt" ]; then
+        bad "$tgt is a DANGLING symlink -> $(readlink "$abs_tgt")"
+      else
+        # Compare the resolved link against $REPO/$src itself, not just its
+        # containing directory — a directory-only compare lets any
+        # transposition among same-directory rows (e.g. ~/.zshrc pointing
+        # at public/shell/zshenv) pass as "ok".
+        link_val="$(readlink "$abs_tgt")"
+        link_dir="$(dirname "$link_val")"
+        if [ -d "$link_dir" ]; then
+          resolved="$(cd "$link_dir" && pwd)/$(basename "$link_val")"
+        else
+          resolved="$link_val"
+        fi
+        expected="$(cd "$REPO/$(dirname "$src")" && pwd)/$(basename "$src")"
+        if [ "$resolved" != "$expected" ]; then
+          bad "$tgt points to the wrong file -> $link_val (expected $REPO/$src)"
+        else
+          ok "$tgt"
+        fi
+      fi
+      ;;
+    copy)
+      if [ ! -f "$abs_tgt" ]; then
+        bad "$tgt missing"
+      elif ! diff -q "$REPO/$src" "$abs_tgt" >/dev/null 2>&1; then
+        bad "$tgt differs from repo — run dot-pull to reconcile"
+      else
+        ok "$tgt"
+      fi
+      ;;
+    *)
+      bad "$tgt has unknown mode '$mode' in manifest.tsv — row not checked"
+      ;;
+  esac
+done < "$MANIFEST"
+
+# A row can be silently dropped without ever reaching the case above — e.g.
+# a space-separated row (no tab) reads entirely into $src, which then
+# doesn't match the ''|'#'* skip either, so it falls through into a mode
+# check with $mode empty; or the manifest loses its trailing newline and
+# `read` drops the last line outright (the classic `while read` gotcha).
+# dot-apply hard-errors on a bad row; this makes dot-doctor unable to
+# silently see fewer rows than the manifest actually has.
+expected_rows=$(awk -F'\t' '$1 !~ /^($|#)/ { c++ } END { print c+0 }' "$MANIFEST")
+if [ "$rows_seen" -ne "$expected_rows" ]; then
+  bad "processed $rows_seen manifest row(s) but the file has $expected_rows — a row was silently skipped"
+fi
+
+echo "== semantic checks =="
+
+# kitty resolves `include` relative to the config file's own directory.
+if [ -f "$HOME/.config/kitty/osaka-jade.conf" ]; then
+  ok "kitty theme sits beside kitty.conf (relative include resolves)"
+else
+  bad "osaka-jade.conf missing beside kitty.conf — colours silently revert to defaults"
+fi
+
+# The two checks below need real files at $REPO/<src>. In the checked-out
+# repo that's public/prompt/cship.toml and public/shell/zshrc, but this
+# same script is also staged verbatim into the flattened public mirror
+# (see dot-publish), where there is no public/ prefix at all — the row's
+# source there is just prompt/cship.toml / shell/zshrc. Deriving the path
+# from manifest.tsv (present, correctly stripped, in both layouts) instead
+# of hardcoding "public/..." is what makes one script correct in both.
+manifest_src_for_target() {
+  awk -F'\t' -v t="$1" '$2 == t { print $1; exit }' "$MANIFEST"
+}
+
+# cship's width is derived from kitty's window geometry.
+cship_src="$(manifest_src_for_target '~/.config/cship.toml')"
+if [ -n "$cship_src" ] && [ -f "$REPO/$cship_src" ]; then
+  cship_width=$(awk -F'= *' '/^width/{print $2; exit}' "$REPO/$cship_src")
+  actual_cols=$(tput cols 2>/dev/null || echo 0)
+  if [ "$cship_width" = "$actual_cols" ]; then
+    ok "cship width $cship_width matches terminal columns"
+  else
+    warn "cship width $cship_width vs actual $actual_cols — expected in a resized window; misaligns the statusline if kitty geometry changed permanently"
+  fi
+else
+  warn "cship.toml not found via manifest (~/.config/cship.toml) — skipping width check"
+fi
+
+# z-sy-h must be the last thing that creates or wraps ZLE widgets. `zle -N`
+# (and `zle -C`) create widgets directly, without going through `source` or
+# `eval` — a `zle -N` line appended below z-sy-h is exactly the D1-class
+# regression this check exists for, so it has to be matched too, not just
+# the two ways of pulling in someone else's plugin.
+zshrc_src="$(manifest_src_for_target '~/.zshrc')"
+if [ -n "$zshrc_src" ] && [ -f "$REPO/$zshrc_src" ]; then
+  last_source=$(grep -nE 'source|eval|zle +-[NC]' "$REPO/$zshrc_src" | tail -1)
+  if printf '%s' "$last_source" | grep -q 'zsh-syntax-highlighting'; then
+    ok "zsh-syntax-highlighting is sourced last"
+  else
+    bad "something is sourced after zsh-syntax-highlighting: $last_source"
+  fi
+else
+  warn "zshrc not found via manifest (~/.zshrc) — skipping z-sy-h ordering check"
+fi
+
+# Nothing may still point at the pre-rename repo path.
+if grep -rl 'cship-osaka-jade' "$HOME/.config" 2>/dev/null | head -1 | grep -q .; then
+  bad "a config still references the pre-rename path cship-osaka-jade"
+else
+  ok "no references to the pre-rename repo path"
+fi
+
+# D4 is conditional: the directory may have been deleted rather than wired.
+if [ -d "$HOME/.zsh/completions" ]; then
+  if script -q /dev/null zsh -l -i -c 'print -l $fpath' 2>/dev/null | tr -d '\r' | grep -q '.zsh/completions'; then
+    ok "~/.zsh/completions is in fpath"
+  else
+    bad "~/.zsh/completions exists but is not in fpath"
+  fi
+else
+  ok "~/.zsh/completions absent (deleted per D4)"
+fi
+
+if ls "$HOME"/.zcompdump-* >/dev/null 2>&1; then
+  ok "zcompdump is version-suffixed"
+else
+  bad "zcompdump is not version-suffixed — a zsh upgrade can serve a stale dump"
+fi
+
+# The public mirror must not silently fall behind. Honours $DOT_MIRROR, the
+# same override dot-publish accepts — a doctor that checks a different
+# path than the tool that maintains it is its own drift.
+MIRROR="${DOT_MIRROR:-$HOME/Development/osaka-jade}"
+if [ -d "$MIRROR/.git" ]; then
+  here=$(publish_fingerprint "$REPO" 2>/dev/null || echo none)
+  marker=$(cat "$REPO/publish/.last-published" 2>/dev/null || echo none)
+  if [ "$here" = "$marker" ]; then
+    ok "public mirror is current"
+  else
+    warn "public/ has changed since the last publish — run dot-publish"
+  fi
+else
+  warn "public mirror not cloned at $MIRROR (expected before Task 20)"
+fi
+
+if gh auth status 2>&1 | grep -B1 'Active account: true' | grep -q 'gati3478'; then
+  ok "gh active account is gati3478"
+else
+  warn "gh active account is NOT gati3478 — repo operations would hit the wrong account"
+fi
+
+# A deferral must not become permanent by neglect.
+if [ -f "$REPO/docs/blocked-upstream.md" ]; then
+  installed=$("$HOME/.local/bin/cship" --version 2>/dev/null | awk '{print $NF}')
+  broken=$(awk -F'`' '/cship.*broken at/{print $2; exit}' "$REPO/docs/blocked-upstream.md")
+  # An unparseable state (cship missing/erroring, or the awk pattern no
+  # longer matching blocked-upstream.md's prose) previously fell through
+  # to the same "ok" as a genuinely-confirmed-unchanged version, silently
+  # asserting something that was never actually checked.
+  if [ -z "$installed" ] || [ -z "$broken" ]; then
+    warn "could not determine cship version or blocked-upstream entry (installed='${installed:-?}' recorded='${broken:-?}') — re-check manually"
+  elif [ "$installed" != "$broken" ]; then
+    warn "cship is $installed, recorded broken at $broken — re-check cship#194"
+  else
+    ok "blocked-upstream entries unchanged"
+  fi
+fi
+
+echo "--"
+[ "$FAILED" -eq 0 ] && echo "no failures" || echo "FAILURES ABOVE"
+exit "$FAILED"

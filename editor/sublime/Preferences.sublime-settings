@@ -1,0 +1,26 @@
+// Settings in here override those in "Default/Preferences.sublime-settings",
+// and are overridden in turn by syntax-specific settings.
+// Preferences.sublime-settings
+{
+  "font_face": "Fira Code",
+  "font_size": 16,
+  "font_options": ["dlig"],
+  "rulers": [80, 100, 120],
+  "ignored_packages":
+  [
+		"Vintage",
+  ],
+  "index_files": true,
+  "highlight_line": true,
+  "scroll_past_end": true,
+  "spell_check": true,
+  "trim_trailing_white_space_on_save": true,
+  "remember_open_files": true,
+  "theme": "ayu-light.sublime-theme",
+  "color_scheme": "gruvbox (Light) (Hard).sublime-color-scheme",
+  "open_files_in_new_window": false,
+  "added_words":
+  [
+		"dev"
+  ],
+}
