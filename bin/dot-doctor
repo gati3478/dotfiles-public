@@ -191,6 +191,18 @@ if [ -f "$REPO/docs/blocked-upstream.md" ]; then
   fi
 fi
 
+# The pre-commit hook (glyph integrity, TOML parse) is opt-in PER CLONE via
+# `git config core.hooksPath .githooks`. Nothing enforced it, and nothing
+# noticed when it was absent — so on a fresh clone the only commit-time
+# protection was silently off until someone remembered the README line. This
+# turns "silently unprotected" into a visible warning.
+hooks_path="$(git -C "$REPO" config --get core.hooksPath 2>/dev/null || true)"
+if [ "$hooks_path" = ".githooks" ]; then
+  ok "pre-commit hooks enabled (core.hooksPath=.githooks)"
+else
+  warn "pre-commit hooks NOT enabled — run: git -C \"$REPO\" config core.hooksPath .githooks (found '${hooks_path:-unset}')"
+fi
+
 echo "--"
 [ "$FAILED" -eq 0 ] && echo "no failures" || echo "FAILURES ABOVE"
 exit "$FAILED"

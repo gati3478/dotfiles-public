@@ -46,7 +46,18 @@ while IFS=$'\t' read -r src tgt mode perms; do
     continue
   fi
 
-  mkdir -p "$(dirname "$abs_tgt")"
+  # Creating a parent is legitimate on a fresh machine, but it must never be
+  # SILENT. Version-pinned targets (the IDEA rows carry `IntelliJIdea2026.2`)
+  # would otherwise let a stale path resurrect itself after a major upgrade:
+  # mkdir -p happily recreates the dead directory, cp succeeds, the run reports
+  # "N entries applied", and the config the IDE actually reads never receives
+  # anything. Announcing the creation is what turns that from silent into
+  # visible — an unexpected line here means a manifest path has gone stale.
+  tgt_dir="$(dirname "$abs_tgt")"
+  if [ ! -d "$tgt_dir" ]; then
+    echo "CREATED DIR     ${tgt_dir/#$HOME/\~}" >&2
+    mkdir -p "$tgt_dir"
+  fi
 
   case "$mode" in
     link)
