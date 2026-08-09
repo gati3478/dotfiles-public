@@ -155,23 +155,42 @@ fi
 # The public mirror must not silently fall behind. Honours $DOT_MIRROR, the
 # same override dot-publish accepts — a doctor that checks a different
 # path than the tool that maintains it is its own drift.
-MIRROR="${DOT_MIRROR:-$HOME/Development/osaka-jade}"
-if [ -d "$MIRROR/.git" ]; then
-  here=$(publish_fingerprint "$REPO" 2>/dev/null || echo none)
-  marker=$(cat "$REPO/publish/.last-published" 2>/dev/null || echo none)
-  if [ "$here" = "$marker" ]; then
-    ok "public mirror is current"
+# The next two checks are SOURCE-REPO ONLY.
+# dot-publish stages this script verbatim into the public mirror, where
+# `publish/` does not exist and neither does dot-publish itself. Run there,
+# the currency check could never pass (its fingerprint hashes HEAD:public and
+# HEAD:docs/public-README.md, neither of which survives the flattening) and its
+# advice pointed at a script that was never shipped. An adopter got a permanent
+# false warning from a tool published so the repo could receive contributions.
+# `publish/` is the context signal — same guard style as blocked-upstream.md
+# below. Found by audit 09-08-2026.
+if [ -d "$REPO/publish" ]; then
+  MIRROR="${DOT_MIRROR:-$HOME/Development/osaka-jade}"
+  if [ -d "$MIRROR/.git" ]; then
+    here=$(publish_fingerprint "$REPO" 2>/dev/null || echo none)
+    marker=$(cat "$REPO/publish/.last-published" 2>/dev/null || echo none)
+    if [ "$here" = "$marker" ]; then
+      ok "public mirror is current"
+    else
+      warn "public/ has changed since the last publish — run dot-publish"
+    fi
   else
-    warn "public/ has changed since the last publish — run dot-publish"
+    warn "public mirror not cloned at $MIRROR"
   fi
-else
-  warn "public mirror not cloned at $MIRROR (expected before Task 20)"
-fi
 
-if gh auth status 2>&1 | grep -B1 'Active account: true' | grep -q 'gati3478'; then
-  ok "gh active account is gati3478"
-else
-  warn "gh active account is NOT gati3478 — repo operations would hit the wrong account"
+  # The expected account is DERIVED from origin, not hardcoded. It read
+  # `grep -q 'gati3478'` until 09-08-2026, so every other user of the mirror was
+  # told their correct account was the wrong one — the same class of defect as
+  # the five hardcoded /Users/gati3478 paths parameterised in Task 20.
+  origin_url=$(git -C "$REPO" remote get-url origin 2>/dev/null || echo '')
+  expected_owner=$(printf '%s' "$origin_url" | sed -E 's#.*[:/]([^/]+)/[^/]+$#\1#')
+  if [ -z "$expected_owner" ] || [ "$expected_owner" = "$origin_url" ]; then
+    warn "could not derive the expected gh account from origin ('${origin_url:-unset}') — check manually"
+  elif gh auth status 2>&1 | grep -B1 'Active account: true' | grep -q "$expected_owner"; then
+    ok "gh active account is $expected_owner"
+  else
+    warn "gh active account is NOT $expected_owner — repo operations would hit the wrong account"
+  fi
 fi
 
 # A deferral must not become permanent by neglect.
@@ -196,11 +215,17 @@ fi
 # noticed when it was absent — so on a fresh clone the only commit-time
 # protection was silently off until someone remembered the README line. This
 # turns "silently unprotected" into a visible warning.
-hooks_path="$(git -C "$REPO" config --get core.hooksPath 2>/dev/null || true)"
-if [ "$hooks_path" = ".githooks" ]; then
-  ok "pre-commit hooks enabled (core.hooksPath=.githooks)"
-else
-  warn "pre-commit hooks NOT enabled — run: git -C \"$REPO\" config core.hooksPath .githooks (found '${hooks_path:-unset}')"
+# Source-repo only, for the same reason as the two checks above: the mirror
+# ships no .githooks, so this warned falsely there. I introduced that false
+# warning earlier the same day while fixing a different one — which is exactly
+# why the guard belongs on the check itself, not on a promise to remember.
+if [ -d "$REPO/.githooks" ]; then
+  hooks_path="$(git -C "$REPO" config --get core.hooksPath 2>/dev/null || true)"
+  if [ "$hooks_path" = ".githooks" ]; then
+    ok "pre-commit hooks enabled (core.hooksPath=.githooks)"
+  else
+    warn "pre-commit hooks NOT enabled — run: git -C \"$REPO\" config core.hooksPath .githooks (found '${hooks_path:-unset}')"
+  fi
 fi
 
 echo "--"
