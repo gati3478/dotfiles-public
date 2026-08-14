@@ -51,6 +51,31 @@ claude-sync-work() {
   fi
 }
 
+# ── Editor ─────────────────────────────────────────────────────────────────
+# Lives here rather than in .zshrc because the consumers are NOT interactive
+# shells: `git commit` with no -m, `git rebase -i`, `visudo` and friends read
+# $EDITOR from whatever environment they were spawned in. Two string exports
+# cost nothing measurable, so the "keep .zshenv minimal" rule is satisfied.
+#
+# Unset until 14-08-2026, which meant all of the above silently fell through
+# to **vi** — a modal editor, against the non-modal principle in
+# docs/preferences.md. That is the defect this block fixes, not a preference
+# tweak.
+#
+# `--wait` is load-bearing: without it the CLI returns instantly, git sees an
+# empty buffer and aborts the commit.
+#
+# The fallback is nano, deliberately NOT vi: over SSH there is no GUI to open,
+# and the whole point of the principle is that the headless case must not land
+# in modal editing either. Guarded on the binary too, so a machine without Zed
+# degrades instead of failing.
+if [ -n "$SSH_CONNECTION" ] || ! command -v zed >/dev/null 2>&1; then
+  export EDITOR='nano'
+else
+  export EDITOR='zed --wait'
+fi
+export VISUAL="$EDITOR"
+
 # Machine-specific overrides (work paths, employer-specific values).
 # Absent on a fresh clone, which is why the guard is here.
 [ -f "$HOME/.zshenv.local" ] && source "$HOME/.zshenv.local"

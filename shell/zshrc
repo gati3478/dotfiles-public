@@ -117,11 +117,35 @@ jset() {
 }
 
 # ── Modern CLI Tools ─────────────────────────────────────
+# fzf shells out to `find` unless told otherwise, which ignores .gitignore and
+# walks node_modules/target/build. fd was already installed and already knows
+# to skip them, so this is a rewiring, not a new dependency.
+#   --hidden       dotfiles are in scope (matches GLOB_DOTS above)
+#   --exclude .git the one directory that is never the answer
+# .gitignore is deliberately still honoured — the opposite of Zed's
+# `search.include_ignored`, and for the opposite reason: Zed can afford to
+# search ignored files because its file_scan_exclusions never walks the heavy
+# build directories, whereas fzf here has no such exclusion list.
+export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git'
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_ALT_C_COMMAND='fd --type d --hidden --exclude .git'
+
+# Set BEFORE `fzf --zsh` below. The widgets read these at invocation rather
+# than at bind time, so the order is not strictly required — but a reader
+# should not have to know that to believe the block works.
 # fzf's --zsh init binds ZLE widgets; guard for non-TTY interactive shells
 # (e.g. Claude Code's `zsh -i -c`) where `setopt zle` errors out.
 if [[ -t 1 ]]; then
   source <(fzf --zsh)
 fi
+
+# man renders unstyled without this; bat is already trusted as kitty's
+# scrollback pager and carries `--theme=ansi` from ~/.config/bat/config, so
+# man pages inherit the terminal palette rather than fighting it.
+# MANROFFOPT=-c is required with groff 1.23+: without it, overstrike sequences
+# reach bat as literal escapes and the page renders as garbage.
+export MANPAGER="sh -c 'col -bx | bat --language=man --plain'"
+export MANROFFOPT='-c'
 eval "$(zoxide init zsh)"               # z <partial-path> to jump directories
 alias ls="eza --icons=auto"
 alias ll="eza -la --icons=auto --git"

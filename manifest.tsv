@@ -15,3 +15,4 @@ editor/zed/keymap.json	~/.config/zed/keymap.json	link
 editor/zed/tasks.json	~/.config/zed/tasks.json	link
 editor/sublime/Preferences.sublime-settings	~/Library/Application Support/Sublime Text/Packages/User/Preferences.sublime-settings	copy
 editor/sublime/Package Control.sublime-settings	~/Library/Application Support/Sublime Text/Packages/User/Package Control.sublime-settings	copy
+editor/sublime/gruvbox-light-hard.sublime-color-scheme	~/Library/Application Support/Sublime Text/Packages/User/gruvbox-light-hard.sublime-color-scheme	copy

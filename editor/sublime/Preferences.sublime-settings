@@ -17,7 +17,11 @@
   "trim_trailing_white_space_on_save": true,
   "remember_open_files": true,
   "theme": "ayu-light.sublime-theme",
-  "color_scheme": "gruvbox (Light) (Hard).sublime-color-scheme",
+  // Vendored, not from the gruvbox package — that package is abandoned
+  // (last push 04-03-2023) and so is every Sublime alternative. The explicit
+  // Packages/User/ path is deliberate: a bare filename would resolve against
+  // any package that happens to ship the same name.
+  "color_scheme": "Packages/User/gruvbox-light-hard.sublime-color-scheme",
   "open_files_in_new_window": false,
   "added_words":
   [
