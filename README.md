@@ -8,7 +8,7 @@ what you see here is the whole shareable surface.
 
 - **kitty** on the Osaka Jade palette — FiraCode Nerd Font Mono at 16pt with
   ligatures, an underline caret, copy-on-select, 50k scrollback paged through `bat`
-- **zsh** — history that searches by real prefix, lazy-loaded nvm/sdkman,
+- **zsh** — history that searches by real prefix, mise-managed runtimes,
   fzf + zoxide + eza, autosuggestions and syntax highlighting
 - **starship** in Osaka Jade, doubling as line 1 of the statusline
 - **cship** — a four-line Claude Code statusline

@@ -11,13 +11,13 @@ fi
 HISTFILE=~/.zsh_history
 HISTSIZE=100000
 SAVEHIST=100000
-setopt SHARE_HISTORY          # Share history across all zsh sessions
-setopt HIST_IGNORE_ALL_DUPS   # Remove older duplicate when new entry added
-setopt HIST_IGNORE_SPACE      # Don't record commands starting with space
-setopt HIST_REDUCE_BLANKS     # Remove extra blanks from history
-setopt HIST_VERIFY            # Show expanded history before executing
-setopt EXTENDED_HISTORY       # Save timestamp with each entry
-setopt HIST_FIND_NO_DUPS      # Skip duplicates during Ctrl+R search
+setopt SHARE_HISTORY
+setopt HIST_IGNORE_ALL_DUPS
+setopt HIST_IGNORE_SPACE
+setopt HIST_REDUCE_BLANKS
+setopt HIST_VERIFY
+setopt EXTENDED_HISTORY
+setopt HIST_FIND_NO_DUPS
 
 # ── Shell Options ────────────────────────────────────────
 # Must precede the Completion block below: its 24h dump-staleness check
@@ -27,11 +27,11 @@ setopt HIST_FIND_NO_DUPS      # Skip duplicates during Ctrl+R search
 # onto the path — never empty, so the guard silently never fires and
 # `compinit -C` (the cached fast path) never runs.
 setopt EXTENDED_GLOB           # required by the (#q…) check in Completion
-setopt AUTO_CD                # cd by typing directory name alone
-setopt CORRECT                # Spelling correction for commands
-setopt INTERACTIVE_COMMENTS   # Allow comments in interactive shell
-setopt NO_BEEP                # Silence terminal bell
-setopt GLOB_DOTS              # Include dotfiles in glob patterns
+setopt AUTO_CD
+setopt CORRECT
+setopt INTERACTIVE_COMMENTS
+setopt NO_BEEP
+setopt GLOB_DOTS
 
 # ── Completion ───────────────────────────────────────────
 fpath=(~/.docker/completions $fpath)
@@ -42,7 +42,9 @@ autoload -Uz compinit
 # upgrade produce a cache miss instead of a stale hit.
 ZCOMPDUMP="$HOME/.zcompdump-$ZSH_VERSION"
 # Rebuild if older than 24h, otherwise use the cached fast path.
-# Full compinit costs ~0.22s; the cached path ~0.02s.
+# ⚠️ Do NOT cite a saving here. traps.md's compinit entry measured the naive
+# comparison and found the real everyday delta indistinguishable from noise;
+# this line used to quote the misleading 0.22s-vs-0.02s figures it refutes.
 if [[ -n $ZCOMPDUMP(#qN.mh+24) ]]; then
   compinit -d "$ZCOMPDUMP"
 else
@@ -187,7 +189,7 @@ eval "$(zoxide init zsh)"               # z <partial-path> to jump directories
 alias ls="eza --icons=auto"
 alias ll="eza -la --icons=auto --git"
 alias lt="eza -T --icons=auto --git-ignore"
-alias t='tmux new-session -A -s remote'  # Start/attach tmux for remote access
+alias t='tmux new-session -A -s remote'
 alias hg='kitty +kitten hyperlinked_grep'  # Clickable grep results (open in editor)
 alias fp='kitty +kitten choose-files'      # Keyboard file picker with previews
 icloud=~/Library/Mobile\ Documents/com~apple~CloudDocs
@@ -225,12 +227,14 @@ sdk() {
 # reads it any more — `nvm` is no longer a command in this shell, which is
 # the intended outcome, not an oversight.
 
-# Re-front the Claude account shim (the node-bin prepend above can land ahead
-# of it; this keeps the shim ahead of the real binary). See ~/.zshenv.
+# Re-front the Claude account shim. `mise activate` above prepends its shim
+# directory, which can land ahead of this one; re-fronting keeps the account
+# shim ahead of the real binary. (Until 14-08-2026 the culprit named here was
+# nvm's PATH prepend, which no longer exists.) See ~/.zshenv.
 path=("$HOME/.local/share/claude-switch/bin" $path)
 
-# Machine-specific overrides. Absent on a fresh clone, so the guard
-# below is a no-op — nothing to track here today.
+# Machine-specific overrides. Absent on a fresh clone, which is why the
+# guard is here; on THIS machine it is a live manifest row.
 [ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"
 
 # ── zsh-syntax-highlighting — MUST BE LAST ───────────────

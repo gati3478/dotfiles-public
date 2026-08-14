@@ -20,5 +20,11 @@ publish_fingerprint() {
     git -C "$repo" rev-parse HEAD:bin/dot-apply        2>/dev/null || echo none
     git -C "$repo" rev-parse HEAD:bin/dot-doctor       2>/dev/null || echo none
     git -C "$repo" rev-parse HEAD:manifest.tsv         2>/dev/null || echo none
+    # This file is itself staged into the mirror (dot-publish, the bin/lib copy).
+    # Omitting it meant editing this very function changed what the mirror ships
+    # while leaving the fingerprint identical — so dot-doctor reported "public
+    # mirror is current" against a mirror that was not. Found 14-08-2026. The
+    # self-reference is safe: this hashes the file's git blob, not its output.
+    git -C "$repo" rev-parse HEAD:bin/lib/publish-fingerprint.sh 2>/dev/null || echo none
   } | shasum -a 256 | awk '{print $1}'
 }

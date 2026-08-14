@@ -64,6 +64,23 @@ while IFS=$'\t' read -r src tgt mode perms; do
       bad "$tgt has unknown mode '$mode' in manifest.tsv — row not checked"
       ;;
   esac
+
+  # The `perms` column is APPLIED by dot-apply (`chmod "$perms"`) and, until
+  # 14-08-2026, was verified by nothing here — this loop read $perms and never
+  # used it. So private/ssh/config could drift from 0600 to 0644 and every row
+  # still reported ok: the column looked like a guarantee and was only ever an
+  # instruction. -L on purpose, because chmod follows symlinks, so the mode that
+  # matters for a link row is the resolved file's.
+  if [ -n "${perms:-}" ] && [ -e "$abs_tgt" ]; then
+    actual="$(stat -Lf '%OLp' "$abs_tgt" 2>/dev/null || stat -Lc '%a' "$abs_tgt" 2>/dev/null)"
+    if [ -z "$actual" ]; then
+      warn "$tgt: could not read mode to compare against manifest's $perms"
+    elif [ "$actual" != "${perms#0}" ] && [ "$actual" != "$perms" ]; then
+      bad "$tgt has mode $actual, manifest declares $perms"
+    else
+      ok "$tgt mode $perms"
+    fi
+  fi
 done < "$MANIFEST"
 
 # A row can be silently dropped without ever reaching the case above — e.g.
