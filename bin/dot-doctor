@@ -183,7 +183,7 @@ fi
 # `publish/` is the context signal — same guard style as blocked-upstream.md
 # below. Found by audit 09-08-2026.
 if [ -d "$REPO/publish" ]; then
-  MIRROR="${DOT_MIRROR:-$HOME/Development/osaka-jade}"
+  MIRROR="${DOT_MIRROR:-$HOME/Development/dotfiles-public}"
   if [ -d "$MIRROR/.git" ]; then
     here=$(publish_fingerprint "$REPO" 2>/dev/null || echo none)
     marker=$(cat "$REPO/publish/.last-published" 2>/dev/null || echo none)

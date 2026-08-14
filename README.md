@@ -1,9 +1,15 @@
-# Osaka Jade
+# dotfiles · public
 
 A macOS terminal and editor setup: kitty, zsh, tmux, starship, the cship Claude
 Code statusline, Zed and Sublime Text. Generated from a private dotfiles repo,
 so what is here is the whole shareable surface — nothing is elided from within a
 file, and nothing beyond this is coming.
+
+> This repo was called **`osaka-jade`** until 15-08-2026, after the kitty
+> palette it ships. The name asserted a unification the setup deliberately
+> rejects — the editors run a different scheme on purpose — and it pinned a
+> theme choice that is explicitly allowed to change. GitHub redirects the old
+> URL. The palette is still Osaka Jade; only the repo is not named after it.
 
 ## What you get
 
@@ -28,8 +34,8 @@ identity, and personal scripts.
 ## Install
 
 ```bash
-git clone https://github.com/gati3478/osaka-jade ~/osaka-jade
-cd ~/osaka-jade && ./bin/bootstrap
+git clone https://github.com/gati3478/dotfiles-public ~/dotfiles-public
+cd ~/dotfiles-public && ./bin/bootstrap
 ```
 
 `bootstrap` asks for your name and email, writes them to `~/.gitconfig.local`,
