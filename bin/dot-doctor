@@ -11,6 +11,7 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MANIFEST="$REPO/manifest.tsv"
 FAILED=0
 source "$REPO/bin/lib/publish-fingerprint.sh"
+[ -f "$REPO/bin/lib/pref-check.sh" ] && source "$REPO/bin/lib/pref-check.sh"
 
 ok()   { printf '  \033[32mok\033[0m    %s\n' "$1"; }
 bad()  { printf '  \033[31mFAIL\033[0m  %s\n' "$1"; FAILED=1; }
@@ -226,6 +227,18 @@ if [ -d "$REPO/.githooks" ]; then
   else
     warn "pre-commit hooks NOT enabled — run: git -C \"$REPO\" config core.hooksPath .githooks (found '${hooks_path:-unset}')"
   fi
+fi
+
+# Asserts docs/preferences.toml against LIVE config — what the applications
+# actually render, not what this repo believes they were given. The manifest
+# checks above prove deployment; these prove the deployed values are the ones
+# preferences.md claims. Two different questions: a copy-mode file can match the
+# repo perfectly and still carry a value the SSOT never sanctioned.
+# The header is printed by run_pref_checks itself, after its own guard. Printing
+# it here would leave a bare heading with nothing under it in the public mirror,
+# which ships bin/ but not docs/ — a section that looks broken rather than absent.
+if declare -f run_pref_checks >/dev/null 2>&1; then
+  run_pref_checks "$REPO" || FAILED=1
 fi
 
 echo "--"
