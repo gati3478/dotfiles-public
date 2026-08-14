@@ -16,7 +16,8 @@
 // break against and no security surface, so "is upstream alive?" is close to
 // meaningless for it — the useful move is to stop having an upstream. Vendored
 // here, the palette is owned, diffable, and tunable toward the colour family in
-// docs/preferences.md instead of frozen at whatever the package author chose.
+// the source repo's docs/preferences.md instead of frozen at whatever the
+// package author chose.
 //
 // This refines the maintenance criterion generally: upstream health is
 // load-bearing for EXECUTABLE extensions and near-irrelevant for declarative

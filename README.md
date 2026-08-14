@@ -23,13 +23,15 @@ cd ~/osaka-jade && ./bin/bootstrap
 
 `bootstrap` asks for your name and email, writes them to `~/.gitconfig.local`,
 then symlinks the rest into place. Existing plain files are backed up before
-being replaced by a symlink; the two copied editor configs (Sublime) are
+being replaced by a symlink; the copied editor configs (Sublime) are
 overwritten directly — back those up yourself if you've already customized
 them.
 
 ## Themes
 
 Osaka Jade in the terminal, Gruvbox Light in editors — deliberately not
-unified, see `docs/preferences.md`.
+unified. Each surface keeps its own character; only the typeface is shared.
+(The reasoning lives in the private source repo's wiki, which is not part of
+this mirror.)
 
 MIT.

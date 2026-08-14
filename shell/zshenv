@@ -59,8 +59,8 @@ claude-sync-work() {
 #
 # Unset until 14-08-2026, which meant all of the above silently fell through
 # to **vi** — a modal editor, against the non-modal principle in
-# docs/preferences.md. That is the defect this block fixes, not a preference
-# tweak.
+# the source repo's docs/preferences.md. That is the defect this block fixes,
+# not a preference tweak.
 #
 # `--wait` is load-bearing: without it the CLI returns instantly, git sees an
 # empty buffer and aborts the commit.

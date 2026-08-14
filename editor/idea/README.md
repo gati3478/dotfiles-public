@@ -16,10 +16,10 @@ rewrites its options on exit.
 | Actions on Save   | reformat code, **changed lines only**, no import optimisation | Settings → Tools → Actions on Save                   |
 | Inline blame      | on                                                            | Settings → Version Control → Git → Show inline blame |
 | Keymap            | **stock macOS, zero customisations**                          | Zed mirrors it via `base_keymap: "JetBrains"`        |
-| Theme             | **Gruvbox Material Light Island** (third-party plugin)       | see `docs/preferences.md`                            |
+| Theme             | **Gruvbox Material Light Island** (third-party plugin)       | reasoning is in the private source repo's wiki, not in this mirror                            |
 | Editor font       | Fira Code 16 + ligatures, JetBrains Mono fallback             | matches kitty and Zed                                |
 | Method separators | on                                                            | Settings → Editor → General → Appearance             |
-| Heap              | `-Xmx6144m`                                                   | `idea.vmoptions` — see the private README            |
+| Heap              | `-Xmx6144m`                                                   | `idea.vmoptions` — recorded in the private source repo, not in this mirror            |
 
 > [!warning] Corrected 08-08-2026
 > This page previously claimed the keymap was a "macOS **copy** (near-stock)"

@@ -165,7 +165,8 @@ fi
 #
 # ⚠️ --disable-up-arrow is REQUIRED, not cosmetic. atuin binds Up by default,
 # which would silently replace the prefix search bound in the Key Bindings
-# section above — a stated preference in docs/preferences.md ("matches
+# section above — a stated preference in the source repo's docs/preferences.md
+# ("matches
 # everything typed so far, not just the first word"), and one that cost a
 # real bug to get right. Up/Down stay as they are.
 #
@@ -192,9 +193,6 @@ alias lt="eza -T --icons=auto --git-ignore"
 alias t='tmux new-session -A -s remote'
 alias hg='kitty +kitten hyperlinked_grep'  # Clickable grep results (open in editor)
 alias fp='kitty +kitten choose-files'      # Keyboard file picker with previews
-icloud=~/Library/Mobile\ Documents/com~apple~CloudDocs
-obsidian=~/Library/Mobile\ Documents/iCloud~md~obsidian/Documents
-obsidian_songbird=~/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Songbird
 
 # ── Zsh Plugins ──────────────────────────────────────────
 # Guarded: a fresh adopter without `brew install zsh-autosuggestions` gets
