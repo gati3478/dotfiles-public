@@ -1,0 +1,19 @@
+{
+    // Terminus has NO font setting of its own by default — it inherits
+    // Sublime's global "font_face", which is plain "Fira Code". That family
+    // carries no Nerd glyphs, so starship's icons render as tofu inside the
+    // embedded terminal while rendering correctly in kitty two windows away.
+    //
+    // "Fira Code" and "FiraCode Nerd Font Mono" are separate installed
+    // families, not two names for one font — confirmed against system_profiler
+    // and fc-list. The editor keeps plain Fira Code deliberately: an editor
+    // surface renders no Nerd glyphs, so it does not need the variant.
+    //
+    // Terminus's own defaults say these must ALSO be set in the syntax-specific
+    // file, so this pairs with "Terminus View.sublime-settings". Setting only
+    // one of the two is the failure mode.
+    "view_settings": {
+        "font_face": "FiraCode Nerd Font Mono",
+        "font_size": 16
+    }
+}

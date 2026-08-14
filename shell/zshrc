@@ -79,15 +79,28 @@ zle -N history-beginning-search-forward-end  history-search-end
 bindkey '^[[A' history-beginning-search-backward-end   # Up:   prefix search
 bindkey '^[[B' history-beginning-search-forward-end    # Down: prefix search
 
-# ── Python (pyenv) ───────────────────────────────────────
-# PATH-only init runs in .zprofile (login shells). Here we add the
-# interactive shell function and virtualenv auto-activation.
-if command -v pyenv >/dev/null 2>&1; then
-  eval "$(pyenv init -)"
-  if command -v pyenv-virtualenv-init >/dev/null 2>&1; then
-    eval "$(pyenv virtualenv-init -)"
-  fi
-fi
+# ── Runtimes: node + python (mise) ───────────────────────
+# Replaces pyenv AND nvm as of 14-08-2026. One binary, one config
+# (~/.config/mise/config.toml), per-directory versions, and no lazy-loading
+# shim to hand-write — the nvm block this removed existed only to defer a
+# ~350 ms `nvm.sh` source that mise does not incur in the first place.
+#
+# Migrated versions are the ones that were live: node 24.16.0, python 3.12.x.
+# ⚠️ python moved 3.12.2 -> 3.12.14 (same minor, latest patch). NOT cosmetic:
+# mise refuses 3.12.2 because no GitHub artifact attestations exist for a
+# Feb-2024 release. Disabling attestation verification was the alternative and
+# was rejected — bypassing a supply-chain check to install an older
+# interpreter is the wrong trade. All 36 packages from the pyenv environment
+# were reinstalled and their imports verified.
+#
+# ⚠️ SDKMAN and `jset` are deliberately NOT migrated. mise wants to manage its
+# own JDKs, which fights the Homebrew temurin casks already installed, and
+# `jset` carries a guard against macOS `java_home` silently resolving to a
+# non-matching JDK that mise offers no equivalent for.
+#
+# Rollback: delete this line, restore the pyenv blocks in .zprofile/.zshrc and
+# the nvm block below. Both tools are still installed.
+eval "$(mise activate zsh)"
 
 # ── Java ─────────────────────────────────────────────────
 # Default JDK is set once per login in .zprofile.
@@ -139,6 +152,30 @@ if [[ -t 1 ]]; then
   source <(fzf --zsh)
 fi
 
+# ── atuin: history as a queryable store ──────────────────
+# Ordering matters — this must come AFTER `fzf --zsh` above, because both bind
+# Ctrl+R and the last binding wins. That is the intended division:
+#   Ctrl+R -> atuin  (history: SQLite-backed, scoped by directory/host/exit)
+#   Ctrl+T -> fzf    (files)
+#   Alt+C  -> fzf    (directories)
+# fzf's Ctrl+R is a generic fuzzy filter over a flat file; atuin's knows what
+# succeeded, where it ran, and when. Nothing is lost by conceding the key.
+#
+# ⚠️ --disable-up-arrow is REQUIRED, not cosmetic. atuin binds Up by default,
+# which would silently replace the prefix search bound in the Key Bindings
+# section above — a stated preference in docs/preferences.md ("matches
+# everything typed so far, not just the first word"), and one that cost a
+# real bug to get right. Up/Down stay as they are.
+#
+# Local-only: no account, no sync, no network. `atuin import auto` seeded it
+# from ~/.zsh_history on 14-08-2026.
+#
+# Guarded like fzf above: `zle -N` needs a real TTY, and Claude Code's
+# `zsh -i -c` is interactive without one.
+if [[ -t 1 ]]; then
+  eval "$(atuin init zsh --disable-up-arrow)"
+fi
+
 # man renders unstyled without this; bat is already trusted as kitty's
 # scrollback pager and carries `--theme=ansi` from ~/.config/bat/config, so
 # man pages inherit the terminal palette rather than fighting it.
@@ -178,20 +215,15 @@ sdk() {
   sdk "$@"
 }
 
-# ── nvm (lazy) ───────────────────────────────────────────
-# Default node goes on PATH directly (newest installed version via numeric
-# glob sort); nvm.sh (~350ms) only loads if `nvm` itself is invoked —
-# same lazy pattern as sdk above.
-export NVM_DIR="$HOME/.nvm"
-_nvm_bin=($NVM_DIR/versions/node/*/bin(Nn[-1]))
-[[ -n "$_nvm_bin" ]] && path=($_nvm_bin $path)
-unset _nvm_bin
-nvm() {
-  unfunction nvm
-  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-  [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
-  nvm "$@"
-}
+# ── nvm — RETIRED 14-08-2026, replaced by mise ───────────
+# The lazy-load shim that lived here (PATH prepend of the newest installed
+# node, plus a self-replacing `nvm` function deferring a ~350 ms nvm.sh) was
+# a workaround for a cost mise does not have. Removing it removes the
+# workaround, not a capability.
+#
+# ~/.nvm is left on disk untouched so rollback needs no reinstall. Nothing
+# reads it any more — `nvm` is no longer a command in this shell, which is
+# the intended outcome, not an oversight.
 
 # Re-front the Claude account shim (the node-bin prepend above can land ahead
 # of it; this keeps the shim ahead of the real binary). See ~/.zshenv.

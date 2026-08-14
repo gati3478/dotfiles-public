@@ -1,0 +1,7 @@
+{
+    // Syntax-specific half of the Terminus font setting. Terminus's shipped
+    // defaults state that font_face/font_size must be specified here as well as
+    // in "Terminus.sublime-settings" — the two are not alternatives.
+    "font_face": "FiraCode Nerd Font Mono",
+    "font_size": 16
+}
