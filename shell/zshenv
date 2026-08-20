@@ -16,11 +16,14 @@ path=("$HOME/.local/bin" $path)
 # account under the work-tree prefix (CC_WORK_PREFIX) and PERSONAL elsewhere — for every
 # launch that resolves `claude` via PATH: interactive, `zsh -c`, and scripts/
 # subprocesses that inherit this PATH. It mirrors manage-once assets (skills/
-# plugins/agents/commands/hooks/workflows/settings.json/CLAUDE.md) from
-# ~/.claude into ~/.claude-work on launch. Each account keeps its own
+# plugins/agents/commands/hooks/output-styles/workflows/settings.json/CLAUDE.md/
+# keybindings.json) from ~/.claude into ~/.claude-work on launch, and unions
+# user-scope MCP servers between the two .claude.json files (both directions,
+# launching side wins, minus CC_MCP_EXCLUDE — so adds propagate; edits and
+# removals go through claude-mcp-rm below). Each account keeps its own
 # .claude.json/projects/sessions/history, so personal + work run CONCURRENTLY.
-# Per-account only: the login + .claude.json (MCP user servers + connectors) +
-# settings.local.json (runtime permission grants). The shim has the full logic.
+# Per-account only: the login, claude.ai connectors, and per-project permission
+# grants — all inside .claude.json. The shim has the full logic.
 # (.zshrc re-prepends this so it also wins in login/interactive shells where the
 # installer re-fronts ~/.local/bin.) NOT reachable: GUI .app / cron launches —
 # for those set CC_ACCOUNT=work in the launcher's environment.
@@ -30,25 +33,25 @@ path=("$HOME/.local/share/claude-switch/bin" $path)
 # works even if PATH ordering ever changes):
 claude-work()     { CC_ACCOUNT=work     "$HOME/.local/share/claude-switch/bin/claude" "$@"; }
 claude-personal() { CC_ACCOUNT=personal "$HOME/.local/share/claude-switch/bin/claude" "$@"; }
-# Resync: refresh asset links AND re-seed MCP user servers personal → work.
-claude-sync-work() {
-  CC_SYNC_ONLY=1 "$HOME/.local/share/claude-switch/bin/claude" || return 1
-  local dst="$HOME/.claude-work/.claude.json"
-  [ -f "$dst" ] || print '{}' > "$dst"
-  if command -v jq >/dev/null 2>&1 && [ -f "$HOME/.claude.json" ]; then
-    local ms tmp
-    ms="$(jq -c '.mcpServers // {}' "$HOME/.claude.json" 2>/dev/null)" || { print -u2 "claude-sync-work: cannot read ~/.claude.json"; return 1; }
-    tmp="$(mktemp)" || return 1
-    if jq --argjson ms "${ms:-{}}" '.mcpServers = ((.mcpServers // {}) + $ms)' "$dst" > "$tmp" 2>/dev/null; then
-      mv "$tmp" "$dst"
-      print "claude-sync-work: linked assets + merged mcpServers → $HOME/.claude-work"
-    else
-      rm -f "$tmp"
-      print -u2 "claude-sync-work: linked assets; MCP merge skipped (work .claude.json left intact)"
-    fi
-  else
-    print "claude-sync-work: linked assets (jq missing: MCP servers not synced)"
-  fi
+# Resync now: refresh asset links AND union user-scope MCP servers both ways,
+# without relaunching. Exits non-zero (and says why) if either pull was skipped
+# — a held lock, a missing .claude.json, no jq.
+claude-sync() {
+  CC_SYNC_ONLY=1 "$HOME/.local/share/claude-switch/bin/claude" \
+    && print "claude-sync: assets linked, MCP servers unioned both ways"
+}
+claude-sync-work() { claude-sync; }   # old name, kept for muscle memory
+
+# Remove a user-scope MCP server from BOTH accounts. The launch-time union is
+# additive, so a one-sided `claude mcp remove` is re-added at the next launch.
+# To EDIT a server: claude-mcp-rm it, then `claude mcp add -s user …` once —
+# the add propagates on its own.
+claude-mcp-rm() {
+  local s="$HOME/.local/share/claude-switch/bin/claude" n
+  for n in "$@"; do
+    CC_ACCOUNT=personal "$s" mcp remove -s user "$n" || print -u2 "claude-mcp-rm: personal: could not remove '$n'"
+    CC_ACCOUNT=work     "$s" mcp remove -s user "$n" || print -u2 "claude-mcp-rm: work: could not remove '$n'"
+  done
 }
 
 # ── Editor ─────────────────────────────────────────────────────────────────
