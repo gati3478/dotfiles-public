@@ -17,8 +17,8 @@ path=("$HOME/.local/bin" $path)
 # launch that resolves `claude` via PATH: interactive, `zsh -c`, and scripts/
 # subprocesses that inherit this PATH. It mirrors manage-once assets (skills/
 # plugins/agents/commands/hooks/output-styles/workflows/settings.json/CLAUDE.md/
-# keybindings.json) from ~/.claude into ~/.claude-work on launch, and unions
-# user-scope MCP servers between the two .claude.json files (both directions,
+# keybindings.json, per-project memory/) from ~/.claude into ~/.claude-work on
+# launch, and unions user-scope MCP servers between the two .claude.json files (both directions,
 # launching side wins, minus CC_MCP_EXCLUDE — so adds propagate; edits and
 # removals go through claude-mcp-rm below). Each account keeps its own
 # .claude.json/projects/sessions/history, so personal + work run CONCURRENTLY.
