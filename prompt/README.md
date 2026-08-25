@@ -1,4 +1,4 @@
-# cship · Gruvbox Dark Hard
+# cship · Gruvbox Material Dark Hard
 
 A four-line [Claude Code](https://claude.com/claude-code) statusline built on
 [cship](https://github.com/stephenleo/cship) ≥ 1.8.1, themed on the Gruvbox
@@ -112,22 +112,22 @@ hourglass (5h), calendar (7d), cube / globe / users (per-model), bolt
 > cell — so the loss is invisible until you go looking for the icons. If you
 > edit `cship.toml`, check the icons are still there afterwards.
 
-## Palette — Gruvbox Dark Hard
+## Palette — Gruvbox Material Dark Hard
 
 | Role           | Hex       |
 | -------------- | --------- |
 | background     | `#1d2021` |
-| aqua           | `#8ec07c` |
-| green          | `#b8bb26` |
-| gold (warn)    | `#fabd2f` |
-| red (critical) | `#fb4934` |
-| foreground     | `#ebdbb2` |
-| blue           | `#83a598` |
+| aqua           | `#89b482` |
+| green          | `#a9b665` |
+| gold (warn)    | `#d8a657` |
+| red (critical) | `#ea6962` |
+| foreground     | `#d4be98` |
+| blue           | `#7daea3` |
 | purple         | `#d3869b` |
-| orange         | `#fe8019` |
+| orange         | `#e78a4e` |
 
-Model families: Fable `#8ec07c` · Opus `#83a598` · Sonnet `#d3869b` ·
-Haiku `#b8bb26`.
+Model families: Fable `#89b482` · Opus `#7daea3` · Sonnet `#d3869b` ·
+Haiku `#a9b665`.
 
 ## License
 

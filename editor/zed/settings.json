@@ -5,7 +5,7 @@
   // "Editor Trio Setup" for that stance.
   "theme": {
     "mode": "light",
-    "light": "Gruvbox Light",
+    "light": "Gruvbox Light Hard",
     "dark": "Gruvbox Dark"
   },
   "icon_theme": {

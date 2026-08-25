@@ -98,10 +98,10 @@ fi
 echo "== semantic checks =="
 
 # kitty resolves `include` relative to the config file's own directory.
-if [ -f "$HOME/.config/kitty/gruvbox-dark-hard.conf" ]; then
+if [ -f "$HOME/.config/kitty/gruvbox-material-dark-hard.conf" ]; then
   ok "kitty theme sits beside kitty.conf (relative include resolves)"
 else
-  bad "gruvbox-dark-hard.conf missing beside kitty.conf — colours silently revert to defaults"
+  bad "gruvbox-material-dark-hard.conf missing beside kitty.conf — colours silently revert to defaults"
 fi
 
 # The two checks below need real files at $REPO/<src>. In the checked-out
