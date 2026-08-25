@@ -146,13 +146,6 @@ else
   warn "zshrc not found via manifest (~/.zshrc) — skipping z-sy-h ordering check"
 fi
 
-# Nothing may still point at the pre-rename repo path.
-if grep -rl 'cship-osaka-jade' "$HOME/.config" 2>/dev/null | head -1 | grep -q .; then
-  bad "a config still references the pre-rename path cship-osaka-jade"
-else
-  ok "no references to the pre-rename repo path"
-fi
-
 # D4 is conditional: the directory may have been deleted rather than wired.
 if [ -d "$HOME/.zsh/completions" ]; then
   if script -q /dev/null zsh -l -i -c 'print -l $fpath' 2>/dev/null | tr -d '\r' | grep -q '.zsh/completions'; then

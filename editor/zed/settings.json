@@ -1,12 +1,12 @@
 {
-  // ── identity: Gruvbox Light + Fira Code, matching kitty ──
+  // ── identity: Gruvbox Light Hard + Fira Code, matching kitty ──
   // The typeface is the one thing unified across every tool (kitty, Zed,
   // Sublime, IDEA); the colour scheme deliberately is not. See the vault's
   // "Editor Trio Setup" for that stance.
   "theme": {
     "mode": "light",
     "light": "Gruvbox Light Hard",
-    "dark": "Gruvbox Dark"
+    "dark": "Gruvbox Dark Hard"
   },
   "icon_theme": {
     "mode": "light",
