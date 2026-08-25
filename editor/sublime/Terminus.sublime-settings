@@ -16,5 +16,33 @@
         "font_face": "FiraCode Nerd Font Mono",
         "font_size": 16,
     },
+    // The palette SOURCE for "theme": "user". Terminus generates both
+    // Terminus.hidden-color-scheme files from this dict (theme.py reads
+    // user_theme_colors); the scheme files are build artifacts. Unset, any
+    // "Select Theme → user" regenerates them from {} and the panel falls back
+    // to defaults — happened twice on 25-08-2026, the second undoing the
+    // first repair. Values: Gruvbox Dark Hard, the same canon kitty carries —
+    // a terminal is dark where code runs, even inside a light editor.
+    "user_theme_colors": {
+        "background": "#1d2021",
+        "foreground": "#ebdbb2",
+        "caret": "#ebdbb2",
+        "black": "#3c3836",
+        "red": "#cc241d",
+        "green": "#98971a",
+        "brown": "#d79921",
+        "blue": "#458588",
+        "magenta": "#b16286",
+        "cyan": "#689d6a",
+        "white": "#a89984",
+        "light_black": "#928374",
+        "light_red": "#fb4934",
+        "light_green": "#b8bb26",
+        "light_brown": "#fabd2f",
+        "light_blue": "#83a598",
+        "light_magenta": "#d3869b",
+        "light_cyan": "#8ec07c",
+        "light_white": "#fbf1c7",
+    },
     "theme": "user",
 }
