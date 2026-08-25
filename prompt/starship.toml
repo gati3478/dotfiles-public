@@ -1,45 +1,45 @@
-# Gruvbox Material Dark Hard — Starship prompt
+# Gruvbox Dark Hard — Starship prompt
 format = "$username$directory$git_branch$git_status$python$java$rust$nodejs$cmd_duration$character"
 
 [cmd_duration]
 min_time = 2000
 format = "took [$duration]($style) "
-style = "bold #d8a657"
+style = "bold #fabd2f"
 
 [username]
 format = "[$user]($style) "
-style_user = "bold #d8a657"
-style_root = "bold #ea6962"
+style_user = "bold #fabd2f"
+style_root = "bold #fb4934"
 show_always = true
 
 [directory]
 format = "[$path]($style) "
-style = "bold #d4be98"
+style = "bold #ebdbb2"
 truncation_length = 3
 
 [character]
-success_symbol = "[❯](bold #a9b665)"
-error_symbol = "[❯](bold #ea6962)"
+success_symbol = "[❯](bold #b8bb26)"
+error_symbol = "[❯](bold #fb4934)"
 
 [git_branch]
 format = "on [$symbol$branch]($style) "
-style = "bold #89b482"
+style = "bold #8ec07c"
 
 [git_status]
-style = "#d8a657"
+style = "#fabd2f"
 
 [python]
 format = "via [$symbol($version)]($style) "
-style = "#7daea3"
+style = "#83a598"
 
 [java]
 format = "via [$symbol($version)]($style) "
-style = "#ea6962"
+style = "#fb4934"
 
 [rust]
 format = "via [$symbol($version)]($style) "
-style = "#e78a4e"
+style = "#fe8019"
 
 [nodejs]
 format = "via [$symbol($version)]($style) "
-style = "#a9b665"
+style = "#b8bb26"
