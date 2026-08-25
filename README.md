@@ -9,22 +9,23 @@ file, and nothing beyond this is coming.
 > palette it ships. The name asserted a unification the setup deliberately
 > rejects — the editors run a different scheme on purpose — and it pinned a
 > theme choice that is explicitly allowed to change. GitHub redirects the old
-> URL. The palette is still Osaka Jade; only the repo is not named after it.
+> URL. That anticipated change has since happened: the terminal moved to
+> Gruvbox Dark Hard on 25-08-2026, and the repo name didn't have to move with it.
 
 ## What you get
 
-| Directory         | Holds                                                                                                                                                                                                                                      |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `shell/`          | zsh in three files split by cost — `zshenv` (every shell), `zprofile` (per login), `zshrc` (interactive). History that searches by real prefix, mise-managed runtimes, fzf + zoxide + eza + atuin, autosuggestions and syntax highlighting |
-| `terminal/kitty/` | kitty on the Osaka Jade palette (the theme is its own `osaka-jade.conf`, included), FiraCode Nerd Font Mono with ligatures, an underline caret, copy-on-select, 50k scrollback paged through `bat`, plus a session-save script             |
-| `terminal/tmux/`  | tmux for SSH — true colour through the overrides, mouse on, 200k history, resurrect/continuum                                                                                                                                              |
-| `terminal/bat/`   | one line: the `ansi` theme, so `bat` follows the terminal palette instead of fighting it                                                                                                                                                   |
-| `prompt/`         | starship in Osaka Jade, doubling as line 1 of the statusline, and the cship config beside it — see `prompt/README.md`                                                                                                                      |
-| `editor/zed/`     | Zed on Gruvbox Light with the JetBrains base keymap: `settings.json`, `keymap.json`, `tasks.json`                                                                                                                                          |
-| `editor/sublime/` | Sublime Text with a **vendored** gruvbox-light-hard colour scheme (its upstream is abandoned) and Terminus configured to match                                                                                                             |
-| `git/`            | `gitconfig` — rebase on pull, auto-set upstream, prune on fetch, `rerere`. Identity is not here; `bootstrap` asks for it                                                                                                                   |
-| `ssh/`            | `config.example` only. The real config names live hosts and is private — this is the ControlMaster/tunnel pattern, sanitised                                                                                                               |
-| `bin/`            | `bootstrap`, a Keychain-reading stdio wrapper for the Context7 MCP server, and the two verbs below — `dot-apply` and `dot-doctor`                                                                                                          |
+| Directory         | Holds                                                                                                                                                                                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shell/`          | zsh in three files split by cost — `zshenv` (every shell), `zprofile` (per login), `zshrc` (interactive). History that searches by real prefix, mise-managed runtimes, fzf + zoxide + eza + atuin, autosuggestions and syntax highlighting   |
+| `terminal/kitty/` | kitty on the Gruvbox Dark Hard palette (the theme is its own `gruvbox-dark-hard.conf`, included), FiraCode Nerd Font Mono with ligatures, an underline caret, copy-on-select, 50k scrollback paged through `bat`, plus a session-save script |
+| `terminal/tmux/`  | tmux for SSH — true colour through the overrides, mouse on, 200k history, resurrect/continuum                                                                                                                                                |
+| `terminal/bat/`   | one line: the `ansi` theme, so `bat` follows the terminal palette instead of fighting it                                                                                                                                                     |
+| `prompt/`         | starship in Gruvbox Dark Hard, doubling as line 1 of the statusline, and the cship config beside it — see `prompt/README.md`                                                                                                                        |
+| `editor/zed/`     | Zed on Gruvbox Light with the JetBrains base keymap: `settings.json`, `keymap.json`, `tasks.json`                                                                                                                                            |
+| `editor/sublime/` | Sublime Text with a **vendored** gruvbox-light-hard colour scheme (its upstream is abandoned) and Terminus configured to match                                                                                                               |
+| `git/`            | `gitconfig` — rebase on pull, auto-set upstream, prune on fetch, `rerere`. Identity is not here; `bootstrap` asks for it                                                                                                                     |
+| `ssh/`            | `config.example` only. The real config names live hosts and is private — this is the ControlMaster/tunnel pattern, sanitised                                                                                                                 |
+| `bin/`            | `bootstrap`, a Keychain-reading stdio wrapper for the Context7 MCP server, and the two verbs below — `dot-apply` and `dot-doctor`                                                                                                            |
 
 Not included, because it is not shareable: the IntelliJ IDEA config (several of
 its option files name an employer, so the whole tree is treated as private even
@@ -60,8 +61,9 @@ There is no second list of files anywhere, which is the point — "installed" an
 
 ## Themes
 
-Osaka Jade in the terminal, Gruvbox Light in editors — deliberately not
-unified. Each surface keeps its own character; the typeface is what they share.
+Gruvbox Dark Hard in the terminal, Gruvbox Light in editors — the same family
+from opposite poles, deliberately not unified into one scheme. Dark where code
+runs, light where it is read; the typeface is shared throughout.
 (The reasoning lives in the private source repo's wiki, which is not part of
 this mirror.)
 

@@ -1,9 +1,9 @@
-# cship · Osaka Jade
+# cship · Gruvbox Dark Hard
 
 A four-line [Claude Code](https://claude.com/claude-code) statusline built on
-[cship](https://github.com/stephenleo/cship) ≥ 1.8.1, themed in the Osaka Jade
-palette, with a matching [Starship](https://starship.rs) prompt config that
-cship reuses for its first line.
+[cship](https://github.com/stephenleo/cship) ≥ 1.8.1, themed on the Gruvbox
+Dark Hard palette, with a matching [Starship](https://starship.rs) prompt
+config that cship reuses for its first line.
 
 Both files live in this directory: `cship.toml` and `starship.toml`.
 
@@ -112,21 +112,22 @@ hourglass (5h), calendar (7d), cube / globe / users (per-model), bolt
 > cell — so the loss is invisible until you go looking for the icons. If you
 > edit `cship.toml`, check the icons are still there afterwards.
 
-## Palette — Osaka Jade
+## Palette — Gruvbox Dark Hard
 
-| Role           | Hex                   |
-| -------------- | --------------------- |
-| background     | `#111c18`             |
-| jade           | `#509475` / `#549e6a` |
-| teal           | `#2DD5B7` / `#ACD4CF` |
-| gold (warn)    | `#E5C736`             |
-| red (critical) | `#FF5345`             |
-| bone           | `#D7C995`             |
-| blue           | `#7DCFFF`             |
-| pink           | `#D2689C`             |
+| Role           | Hex       |
+| -------------- | --------- |
+| background     | `#1d2021` |
+| aqua           | `#8ec07c` |
+| green          | `#b8bb26` |
+| gold (warn)    | `#fabd2f` |
+| red (critical) | `#fb4934` |
+| foreground     | `#ebdbb2` |
+| blue           | `#83a598` |
+| purple         | `#d3869b` |
+| orange         | `#fe8019` |
 
-Model families: Fable `#2DD5B7` · Opus `#ACD4CF` · Sonnet `#7DCFFF` ·
-Haiku `#549e6a`.
+Model families: Fable `#8ec07c` · Opus `#83a598` · Sonnet `#d3869b` ·
+Haiku `#b8bb26`.
 
 ## License
 

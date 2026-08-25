@@ -1,4 +1,4 @@
-# ── CShip · Osaka Jade — 4-line layout, v1.1 (cship ≥ 1.8.1) ─────────────────
+# ── CShip · Gruvbox Dark Hard — 4-line layout, v1.1 (cship ≥ 1.8.1) ──────────
 # 1: directory · branch · git status · runtimes        (Starship passthrough)
 # 2: model · effort · agent          ⇥ session duration (identity, fill-aligned)
 # 3: context · cost · ±lines         ⇥ 5h/7d windows    (metrics, fill-aligned)
@@ -32,28 +32,28 @@ symbol = " "
 
 [cship.model]
 symbol = " "
-style  = "bold fg:#ACD4CF"
+style  = "bold fg:#83a598"
 
 # Per-family colours (case-insensitive; legacy *_style fields would win, so
 # all families live here). Unknown families fall back to `style` above.
 [cship.model.family_style]
-fable  = "bold fg:#2DD5B7"
-opus   = "bold fg:#ACD4CF"
-sonnet = "bold fg:#7DCFFF"
-haiku  = "bold fg:#549e6a"
+fable  = "bold fg:#8ec07c"
+opus   = "bold fg:#83a598"
+sonnet = "bold fg:#d3869b"
+haiku  = "bold fg:#b8bb26"
 
 [cship.agent]
 symbol = "↳ "
-style  = "fg:#D2689C"
+style  = "fg:#fe8019"
 
 [cship.effort]
 symbol       = "󰓅 "
-style        = "fg:#ACD4CF"
-low_style    = "fg:#549e6a"
-medium_style = "fg:#7DCFFF"
-high_style   = "fg:#E5C736"
-xhigh_style  = "bold fg:#E5C736"
-max_style    = "bold fg:#FF5345"
+style        = "fg:#83a598"
+low_style    = "fg:#b8bb26"
+medium_style = "fg:#83a598"
+high_style   = "fg:#fabd2f"
+xhigh_style  = "bold fg:#fabd2f"
+max_style    = "bold fg:#fb4934"
 
 # DISABLED — reads the default (unsuffixed) `Claude Code-credentials` keychain entry, so a
 # multi-account CLAUDE_CONFIG_DIR setup always shows the default account in every session, never the
@@ -64,7 +64,7 @@ max_style    = "bold fg:#FF5345"
 disabled = true
 symbol   = "󰀄 "
 format   = "{label}"
-style    = "bold fg:#E5C736"
+style    = "bold fg:#fabd2f"
 ttl      = 86400
 
 # Maps each account's raw {organization} → a friendly label; {label} falls back to the org name if
@@ -77,36 +77,36 @@ ttl      = 86400
 
 [cship.context_bar]
 width              = 12
-style              = "fg:#2DD5B7"
+style              = "fg:#8ec07c"
 warn_threshold     = 40.0
-warn_style         = "fg:#E5C736"
+warn_style         = "fg:#fabd2f"
 critical_threshold = 70.0
-critical_style     = "bold fg:#FF5345"
+critical_style     = "bold fg:#fb4934"
 
 [cship.cost]
 symbol             = " "
-style              = "fg:#549e6a"
+style              = "fg:#b8bb26"
 warn_threshold     = 2.0
-warn_style         = "fg:#E5C736"
+warn_style         = "fg:#fabd2f"
 critical_threshold = 5.0
-critical_style     = "bold fg:#FF5345"
+critical_style     = "bold fg:#fb4934"
 
 # +/- live in the formats (not as line literals) so they vanish with the value
 # instead of orphaning as "+ -" in a fresh session.
 [cship.cost.total_lines_added]
 format = "[+$value]($style)"
-style  = "fg:#549e6a"
+style  = "fg:#b8bb26"
 
 [cship.cost.total_lines_removed]
 format = "[-$value]($style)"
-style  = "fg:#FF5345"
+style  = "fg:#fb4934"
 
 # Human-readable since 1.8.0 (45s / 1m30s / 2h15m30s) — was raw ms when we
 # removed it in the 1.5.1 layout; safe to show again.
 [cship.cost.total_duration_ms]
 symbol = " "
 format = "[$symbol$value]($style)"
-style  = "fg:#D7C995"
+style  = "fg:#ebdbb2"
 
 [cship.usage_limits]
 ttl                = 120
@@ -119,9 +119,9 @@ oauth_apps_format  = " oauth {pct}%"
 extra_usage_format = " extra {pct}% (${used}/${limit})"
 separator          = "   "
 warn_threshold     = 70.0
-warn_style         = "fg:#E5C736"
+warn_style         = "fg:#fabd2f"
 critical_threshold = 90.0
-critical_style     = "bold fg:#FF5345"
+critical_style     = "bold fg:#fb4934"
 
 [cship.context_window.used_tokens]
-style = "fg:#7DCFFF"
+style = "fg:#83a598"
