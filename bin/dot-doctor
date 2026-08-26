@@ -104,6 +104,15 @@ else
   bad "current-theme.conf missing beside kitty.conf — colours silently revert to defaults"
 fi
 
+# atuin is local-only by decision: no account, no sync. Logging in is what
+# creates this file, so its absence IS the enforcement — config keys cannot
+# express "never logged in".
+if [ ! -f "$HOME/.local/share/atuin/session" ]; then
+  ok "atuin is local-only (no session file — never logged in)"
+else
+  bad "atuin has a session file — an account is logged in, against the local-only decision"
+fi
+
 # The two checks below need real files at $REPO/<src>. In the checked-out
 # repo that's public/prompt/cship.toml and public/shell/zshrc, but this
 # same script is also staged verbatim into the flattened public mirror

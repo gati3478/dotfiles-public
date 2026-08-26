@@ -18,6 +18,11 @@ setopt HIST_REDUCE_BLANKS
 setopt HIST_VERIFY
 setopt EXTENDED_HISTORY
 setopt HIST_FIND_NO_DUPS
+# Adopted 26-08-2026 from the zshoptions(1) sweep: fcntl locking for the
+# shared file (many concurrent shells write it), and dedupe applied at
+# write-out too, not just in the in-memory list.
+setopt HIST_FCNTL_LOCK
+setopt HIST_SAVE_NO_DUPS
 
 # ── Shell Options ────────────────────────────────────────
 # Must precede the Completion block below: its 24h dump-staleness check
@@ -32,6 +37,9 @@ setopt CORRECT
 setopt INTERACTIVE_COMMENTS
 setopt NO_BEEP
 setopt GLOB_DOTS
+# Adopted 26-08-2026: `>` refuses to overwrite an existing file; `>|` is
+# the deliberate override.
+setopt NO_CLOBBER
 
 # ── Completion ───────────────────────────────────────────
 fpath=(~/.docker/completions $fpath)
@@ -132,9 +140,11 @@ jset() {
 }
 
 # ── Modern CLI Tools ─────────────────────────────────────
-# fzf shells out to `find` unless told otherwise, which ignores .gitignore and
-# walks node_modules/target/build. fd was already installed and already knows
-# to skip them, so this is a rewiring, not a new dependency.
+# fzf 0.74 walks with its own built-in walker unless told otherwise (an
+# earlier comment here said it shells out to `find` — refuted 26-08-2026
+# against the installed man page). fd honours .gitignore and skips
+# node_modules/target/build, so the finder searches what the repo considers
+# real, by an explicit, asserted command.
 #   --hidden       dotfiles are in scope (matches GLOB_DOTS above)
 #   --exclude .git the one directory that is never the answer
 # .gitignore is deliberately still honoured — the opposite of Zed's
@@ -170,22 +180,23 @@ fi
 # everything typed so far, not just the first word"), and one that cost a
 # real bug to get right. Up/Down stay as they are.
 #
-# Local-only: no account, no sync, no network. `atuin import auto` seeded it
-# from ~/.zsh_history on 14-08-2026.
+# Local-only: no account, no sync, no network — which is also why
+# --disable-ai: atuin 18.19 binds `?` to Atuin AI by default (found by the
+# 26-08-2026 audit), and an AI keybinding has no place in a local-only
+# history. `atuin import auto` seeded it from ~/.zsh_history on 14-08-2026.
 #
 # Guarded like fzf above: `zle -N` needs a real TTY, and Claude Code's
 # `zsh -i -c` is interactive without one.
 if [[ -t 1 ]]; then
-  eval "$(atuin init zsh --disable-up-arrow)"
+  eval "$(atuin init zsh --disable-up-arrow --disable-ai)"
 fi
 
 # man renders unstyled without this; bat is already trusted as kitty's
 # scrollback pager and carries `--theme=ansi` from ~/.config/bat/config, so
 # man pages inherit the terminal palette rather than fighting it.
-# MANROFFOPT=-c is required with groff 1.23+: without it, overstrike sequences
-# reach bat as literal escapes and the page renders as garbage.
+# (A MANROFFOPT='-c' for groff lived here — macOS man is mandoc and never
+# reads it; measured 26-08-2026, removed.)
 export MANPAGER="sh -c 'col -bx | bat --language=man --plain'"
-export MANROFFOPT='-c'
 eval "$(zoxide init zsh)"               # z <partial-path> to jump directories
 alias ls="eza --icons=auto"
 alias ll="eza -la --icons=auto --git"
