@@ -113,6 +113,32 @@ else
   bad "atuin has a session file — an account is logged in, against the local-only decision"
 fi
 
+# eza rides the terminal's 16 ANSI colours BY DEFAULT (measured 27-08-2026:
+# only 4-bit SGR codes in its output) — a state no text reader can see, and
+# one a version bump could change silently. Proven behaviourally: a fixture
+# run must emit no 256-colour or truecolor codes. A 4-bit remap via
+# EZA_COLORS/LS_COLORS would pass, and should: it still rides the palette.
+# theme.yml is checked by absence because it is palette-carrying by
+# construction. Control: the fixture guarantees coloured output exists (a
+# dir and an executable), so an empty capture fails rather than passing.
+if command -v eza >/dev/null 2>&1; then
+  eza_fixture="$(mktemp -d)"
+  mkdir "$eza_fixture/dir" && touch "$eza_fixture/exec" && chmod +x "$eza_fixture/exec"
+  eza_out="$(eza --color=always -la "$eza_fixture" 2>/dev/null)"
+  rm -rf "$eza_fixture"
+  if ! printf '%s' "$eza_out" | grep -q $'\x1b\['; then
+    bad "eza emitted no colour at all — the ANSI-rider check has nothing to prove"
+  elif printf '%s' "$eza_out" | grep -qE $'\x1b\[[0-9;]*(38|48);(5|2);'; then
+    bad "eza emitted 256-colour/truecolor SGR codes — no longer riding the 16 ANSI colours (version bump? EZA_COLORS/LS_COLORS set?)"
+  elif [ -f "$HOME/.config/eza/theme.yml" ]; then
+    bad "~/.config/eza/theme.yml exists — a palette-carrying override against the rider rule"
+  else
+    ok "eza rides the 16 ANSI colours (4-bit output, no theme.yml)"
+  fi
+else
+  warn "eza not installed — skipping the ANSI-rider check"
+fi
+
 # The two checks below need real files at $REPO/<src>. In the checked-out
 # repo that's public/prompt/cship.toml and public/shell/zshrc, but this
 # same script is also staged verbatim into the flattened public mirror

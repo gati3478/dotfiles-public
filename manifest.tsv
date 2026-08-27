@@ -1,6 +1,7 @@
 shell/zshrc	~/.zshrc	link
 shell/zshenv	~/.zshenv	link
 shell/zprofile	~/.zprofile	link
+shell/atuin/config.toml	~/.config/atuin/config.toml	link
 terminal/kitty/kitty.conf	~/.config/kitty/kitty.conf	link
 terminal/kitty/current-theme.conf	~/.config/kitty/current-theme.conf	copy
 terminal/kitty/save-session.sh	~/.config/kitty/save-session.sh	link	0755

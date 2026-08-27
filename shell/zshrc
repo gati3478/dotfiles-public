@@ -19,8 +19,9 @@ setopt HIST_VERIFY
 setopt EXTENDED_HISTORY
 setopt HIST_FIND_NO_DUPS
 # Adopted 26-08-2026 from the zshoptions(1) sweep: fcntl locking for the
-# shared file (many concurrent shells write it), and dedupe applied at
-# write-out too, not just in the in-memory list.
+# shared file (many concurrent shells write it), and dedupe at write-out —
+# near-inert while HIST_IGNORE_ALL_DUPS keeps the in-memory list clean, and
+# kept as the guard for what SHARE_HISTORY imports from other shells.
 setopt HIST_FCNTL_LOCK
 setopt HIST_SAVE_NO_DUPS
 
@@ -40,8 +41,22 @@ setopt GLOB_DOTS
 # Adopted 26-08-2026: `>` refuses to overwrite an existing file; `>|` is
 # the deliberate override.
 setopt NO_CLOBBER
+# Adopted 27-08-2026 from the zsh 5.9 re-sweep (zshoptions/zshparam):
+setopt ALWAYS_TO_END           # completing mid-word parks the cursor at word end
+setopt COMPLETE_IN_WORD        # …and completes from both ends, not just the tail
+setopt NO_FLOW_CONTROL         # an accidental Ctrl+S no longer wedges the terminal
+# Spelling correction never offers completion functions (_git for a git typo).
+CORRECT_IGNORE='_*'
+# Commands over 10s of CPU time print timing stats unasked. CPU, not wall
+# clock — a slow network wait never triggers it.
+REPORTTIME=10
+# Platform-standard word motion: every non-alphanumeric is a boundary, so
+# option+arrow stops at path segments and Ctrl+W kills one segment, not the
+# whole path. (zsh's default glues *?_-.[]~=/&;!#$%^(){}<> into words.)
+WORDCHARS=''
 
 # ── Completion ───────────────────────────────────────────
+# Docker Desktop's zsh completion lives here.
 fpath=(~/.docker/completions $fpath)
 autoload -Uz compinit
 # Versioned dump: a zsh upgrade changes the dump format, and `compinit -C`
@@ -60,7 +75,21 @@ else
 fi
 zstyle ':completion:*' menu select
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
-zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+# Coloured by file type in the terminal's 16 colours. The codes live HERE
+# deliberately rather than in an exported LS_COLORS: eza reads LS_COLORS as
+# an override, so exporting these would downgrade its richer per-extension
+# built-ins (measured 27-08-2026 — eza's own defaults are pure 4-bit). The
+# ${(s.:.)LS_COLORS} expansion this replaces was empty when measured
+# (27-08-2026), and no managed file ever set the variable.
+zstyle ':completion:*' list-colors 'di=01;34:ln=01;36:so=01;35:pi=33:ex=01;32:bd=01;33:cd=01;33:su=31:sg=31:tw=01;34:ow=01;34'
+# Labelled sections instead of one pile, and a deterministic message instead
+# of silence when nothing matches (adopted 27-08-2026, zshcompsys sweep).
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*:descriptions' format '%B%d%b'
+zstyle ':completion:*:warnings' format 'no matches: %d'
+# brew install foo; foo<TAB> completes immediately — rehash on each search.
+# The man page's speed caveat is about slow file access; PATH here is SSD.
+zstyle ':completion:*' rehash true
 
 # ── ssh/scp completion: offer hosts, not macOS service accounts ──────────
 # `ssh <TAB>` was offering 146 candidates, ~129 of them macOS daemon users
@@ -88,6 +117,18 @@ zle -N history-beginning-search-backward-end history-search-end
 zle -N history-beginning-search-forward-end  history-search-end
 bindkey '^[[A' history-beginning-search-backward-end   # Up:   prefix search
 bindkey '^[[B' history-beginning-search-forward-end    # Down: prefix search
+
+# Pasted text renders plain, not standout — the last surface where a paste
+# was not clean. Only the paste context is overridden; every other
+# zle_highlight default stays (zshzle: "used to override a default").
+zle_highlight=('paste:none')
+
+# Ctrl+X Ctrl+E edits the buffer in $EDITOR (zed --wait), as in ksh — a
+# multi-line command stops being nursed through ZLE. Creates a widget, so
+# it must stay above the z-sy-h source line (adopted 27-08-2026).
+autoload -Uz edit-command-line
+zle -N edit-command-line
+bindkey '^X^E' edit-command-line
 
 # ── Runtimes: node + python (mise) ───────────────────────
 # Replaces pyenv AND nvm as of 14-08-2026. One binary, one config
@@ -155,6 +196,18 @@ export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git'
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 export FZF_ALT_C_COMMAND='fd --type d --hidden --exclude .git'
 
+# fzf rides the terminal's 16 ANSI colours instead of carrying its own —
+# its unconfigured base scheme is a 256-colour "dark" palette of fzf's own,
+# so silence does NOT comply here (unlike eza). Same rider rule as bat's
+# --theme=ansi. Reaches zi too: zoxide passes FZF_DEFAULT_OPTS through to
+# its fzf child unchanged (probe-measured 27-08-2026).
+export FZF_DEFAULT_OPTS='--color=16'
+# Previews answer "is this the one I mean?" before Enter. bat carries
+# --theme=ansi from its config and eza's defaults are already 4-bit, so
+# both previews stay in-palette (adopted 27-08-2026, fzf 0.74 sweep).
+export FZF_CTRL_T_OPTS='--preview "bat --color=always --style=numbers --line-range=:200 {}"'
+export FZF_ALT_C_OPTS='--preview "eza -1 --icons=auto --color=always {}"'
+
 # Set BEFORE `fzf --zsh` below. The widgets read these at invocation rather
 # than at bind time, so the order is not strictly required — but a reader
 # should not have to know that to believe the block works.
@@ -180,10 +233,16 @@ fi
 # everything typed so far, not just the first word"), and one that cost a
 # real bug to get right. Up/Down stay as they are.
 #
-# Local-only: no account, no sync, no network — which is also why
-# --disable-ai: atuin 18.19 binds `?` to Atuin AI by default (found by the
-# 26-08-2026 audit), and an AI keybinding has no place in a local-only
-# history. `atuin import auto` seeded it from ~/.zsh_history on 14-08-2026.
+# Local-only: no account, no sync — which is also why --disable-ai:
+# atuin 18.19 binds `?` to Atuin AI by default (found by the 26-08-2026
+# audit), and an AI keybinding has no place in a local-only history.
+# ("no network" was overclaimed here until 27-08-2026: the update check —
+# at most hourly, per 18.19's own needs_update_check — is on, deliberately;
+# its notice is this surface's version-bump re-trigger signal, the same
+# reasoning that kept kitty's 24h one.)
+# `atuin import auto` seeded it from ~/.zsh_history on 14-08-2026; since
+# 27-08-2026 config.toml is a manifest row (search-UI columns, workspaces,
+# tmux popup — the sweep's adoptions).
 #
 # Guarded like fzf above: `zle -N` needs a real TTY, and Claude Code's
 # `zsh -i -c` is interactive without one.
@@ -198,10 +257,15 @@ fi
 # reads it; measured 26-08-2026, removed.)
 export MANPAGER="sh -c 'col -bx | bat --language=man --plain'"
 eval "$(zoxide init zsh)"               # z <partial-path> to jump directories
-alias ls="eza --icons=auto"
-alias ll="eza -la --icons=auto --git"
-alias lt="eza -T --icons=auto --git-ignore"
-alias t='tmux new-session -A -s remote'
+# --hyperlink=auto (real terminals only) makes every entry kitty-clickable
+# — the same instinct as hg below. Adopted 27-08-2026 from the eza sweep.
+# The =auto is load-bearing, not style: bare --hyperlink greedily consumes
+# the next positional, so `ls <path>` errors (caught by the 27-08 audit).
+alias ls="eza --icons=auto --hyperlink=auto"
+alias ll="eza -la --icons=auto --git --hyperlink=auto"
+alias lt="eza -T --icons=auto --git-ignore --hyperlink=auto"
+# (an `alias t` for LOCAL tmux attach lived here — deleted 27-08-2026: one
+# recorded use ever, and a local session is what the SSH-only law prevents.)
 alias hg='kitty +kitten hyperlinked_grep'  # Clickable grep results (open in editor)
 alias fp='kitty +kitten choose-files'      # Keyboard file picker with previews
 

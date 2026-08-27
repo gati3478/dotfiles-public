@@ -1,5 +1,9 @@
 # Gruvbox Dark Hard — Starship prompt
-format = "$username$directory$git_branch$git_status$python$java$rust$nodejs$cmd_duration$character"
+# A curated allowlist, not $all — a module absent here can never render.
+# git_state, kotlin, gradle, jobs joined 27-08-2026 (the 1.26 sweep): the
+# prompt was silent mid-rebase, named java but not the Kotlin·Gradle work
+# stack, and hid backgrounded jobs.
+format = "$username$directory$git_branch$git_state$git_status$python$java$kotlin$gradle$rust$nodejs$jobs$cmd_duration$character"
 
 [cmd_duration]
 min_time = 2000
