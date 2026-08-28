@@ -10,6 +10,8 @@ terminal/bat/config	~/.config/bat/config	link
 prompt/starship.toml	~/.config/starship.toml	link
 prompt/cship.toml	~/.config/cship.toml	link
 git/gitconfig	~/.gitconfig	link
+git/ignore	~/.config/git/ignore	link
+gh/config.yml	~/.config/gh/config.yml	copy
 bin/mcp-context7.sh	~/.local/bin/mcp-context7.sh	link	0755
 editor/zed/settings.json	~/.config/zed/settings.json	link
 editor/zed/keymap.json	~/.config/zed/keymap.json	link

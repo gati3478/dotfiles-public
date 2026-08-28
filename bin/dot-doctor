@@ -139,6 +139,70 @@ else
   warn "eza not installed — skipping the ANSI-rider check"
 fi
 
+# delta rides the 16 ANSI colours BY CONFIGURATION (the deployed gitconfig's
+# [delta] block — syntax-theme ansi plus named-ANSI styles), unlike eza's
+# by-default ride above, and an upgrade can grow a new decorated element
+# whose default is truecolor without any asserted key changing. Proven the
+# same way: a fixture diff must colour without 256-colour or truecolor SGR.
+# 38;5;0-15 would still resolve to the terminal palette, but the one case
+# delta was measured to emit came from a keyword colour the config
+# deliberately avoids (brightblack -> 38;5;8), so the strict grep doubles
+# as a guard against reintroducing one. Control: the fixture guarantees
+# changed lines exist.
+if command -v delta >/dev/null 2>&1 && command -v git >/dev/null 2>&1; then
+  delta_fixture="$(mktemp -d)"
+  printf 'line one\nline two\n' > "$delta_fixture/a"
+  printf 'line one\nline TWO\n' > "$delta_fixture/b"
+  delta_out="$(git diff --no-index "$delta_fixture/a" "$delta_fixture/b" 2>/dev/null | delta --width 100 2>/dev/null)"
+  rm -rf "$delta_fixture"
+  if ! printf '%s' "$delta_out" | grep -q $'\x1b\['; then
+    bad "delta emitted no colour at all — the ANSI-rider check has nothing to prove"
+  elif printf '%s' "$delta_out" | grep -qE $'\x1b\[[0-9;]*(38|48);(5|2);'; then
+    bad "delta emitted 256-colour/truecolor SGR codes — not riding the 16 ANSI colours (deployed [delta] styles changed, or an upgrade grew a truecolor default)"
+  else
+    ok "delta rides the 16 ANSI colours (4-bit output on a fixture diff)"
+  fi
+else
+  warn "delta or git not installed — skipping the delta ANSI-rider check"
+fi
+
+# The global excludes file is a manifest row; this proves git actually
+# CONSULTS it. core.excludesFile unset falls back to the XDG path the row
+# deploys, so an override appearing in any scope would silently detach the
+# deployed file while every text read stayed green. Negative control: a
+# name the file does not list must NOT be ignored, or the probe proved
+# nothing about the two that were.
+if command -v git >/dev/null 2>&1; then
+  ign_fixture="$(mktemp -d)"
+  git -C "$ign_fixture" init -q 2>/dev/null
+  mkdir -p "$ign_fixture/.claude"
+  touch "$ign_fixture/.DS_Store" "$ign_fixture/.claude/settings.local.json" "$ign_fixture/control.txt"
+  if ! git -C "$ign_fixture" check-ignore -q .DS_Store; then
+    bad "global excludes: .DS_Store is NOT ignored — git is not consulting the deployed ignore file"
+  elif ! git -C "$ign_fixture" check-ignore -q .claude/settings.local.json; then
+    bad "global excludes: .claude/settings.local.json is NOT ignored — the **/ pattern no longer matches"
+  elif git -C "$ign_fixture" check-ignore -q control.txt; then
+    bad "global excludes: the negative control IS ignored — the probe proves nothing"
+  else
+    ok "global excludes live (.DS_Store and .claude/settings.local.json ignored; control isn't)"
+  fi
+  rm -rf "$ign_fixture"
+fi
+
+# core.fsmonitor=true is asserted as a value; this proves the daemon the
+# value promises actually runs — a status must leave one watching this
+# repo, or every status is still paying the tree walk the setting exists
+# to remove. Self-scoping: silent when the deployed config does not enable
+# it, so removing the preference does not strand a failing check.
+if [ "$(git -C "$REPO" config --get core.fsmonitor 2>/dev/null)" = "true" ]; then
+  git -C "$REPO" status --short >/dev/null 2>&1
+  if git -C "$REPO" fsmonitor--daemon status >/dev/null 2>&1; then
+    ok "fsmonitor daemon is watching this repo (core.fsmonitor=true is live)"
+  else
+    bad "core.fsmonitor=true but no daemon is watching this repo — status still walks the tree"
+  fi
+fi
+
 # The two checks below need real files at $REPO/<src>. In the checked-out
 # repo that's public/prompt/cship.toml and public/shell/zshrc, but this
 # same script is also staged verbatim into the flattened public mirror

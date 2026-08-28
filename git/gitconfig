@@ -6,6 +6,11 @@
 	prune = true
 [rerere]
 	enabled = true
+[diff]
+	algorithm = histogram
+[rebase]
+	updateRefs = true
+	autosquash = true
 [filter "lfs"]
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process
@@ -14,6 +19,8 @@
 [core]
 	autocrlf = input
 	pager = delta
+	fsmonitor = true
+	untrackedCache = true
 [init]
 	defaultBranch = main
 [interactive]
@@ -22,6 +29,18 @@
 	navigate = true
 	side-by-side = true
 	line-numbers = true
+	# The ANSI ride (preferences.md § Colour): named 4-bit colors and pure
+	# attributes only, so a kitty theme swap recolors diffs for free. delta's
+	# `brightblack` keyword betrays the rule — it emits 38;5;8 — hence
+	# `normal dim` for the zero style; dot-doctor proves the output 4-bit.
+	syntax-theme = ansi
+	minus-style = red
+	minus-emph-style = reverse red
+	plus-style = green
+	plus-emph-style = reverse green
+	line-numbers-minus-style = red
+	line-numbers-plus-style = green
+	line-numbers-zero-style = normal dim
 [merge]
 	conflictstyle = zdiff3
 [include]
