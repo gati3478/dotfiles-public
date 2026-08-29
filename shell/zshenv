@@ -79,6 +79,15 @@ else
 fi
 export VISUAL="$EDITOR"
 
+# ── ripgrep ────────────────────────────────────────────────────────────────
+# rg reads a config only when this names one; without the export every flag
+# in that file is dead text. Lives here rather than .zshrc because rg's
+# callers are not interactive shells — editor searches, scripts, agent tool
+# calls — and the scope agreement (--hidden matching GLOB_DOTS and fd) is
+# for all of them. A static export costs nothing, so "keep .zshenv minimal"
+# holds. CLI flags override, so nothing is locked in.
+export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/config"
+
 # Machine-specific overrides (work paths, employer-specific values).
 # Absent on a fresh clone, which is why the guard is here.
 [ -f "$HOME/.zshenv.local" ] && source "$HOME/.zshenv.local"

@@ -256,6 +256,14 @@ fi
 # (A MANROFFOPT='-c' for groff lived here — macOS man is mandoc and never
 # reads it; measured 26-08-2026, removed.)
 export MANPAGER="sh -c 'col -bx | bat --language=man --plain'"
+# One lever for every pager: bat's less, delta's less, and a bare
+# `… | less` all read $LESS. -i folds case until the pattern carries a
+# capital (completion's rule, applied to pager search); -R passes ANSI
+# through on manual pipes; -F prints-and-exits when output fits one screen;
+# --incsearch moves the match as you type (less 668; adopted 29-08-2026).
+# --mouse is deliberately absent: less grabbing the mouse takes selection
+# hostage, so copy-on-select inside a pager dies with it.
+export LESS='-iRF --incsearch'
 eval "$(zoxide init zsh)"               # z <partial-path> to jump directories
 # --hyperlink=auto (real terminals only) makes every entry kitty-clickable
 # — the same instinct as hg below. Adopted 27-08-2026 from the eza sweep.

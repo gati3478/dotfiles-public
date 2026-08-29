@@ -6,6 +6,11 @@
 
 # ── Homebrew (single source of truth) ─────────────────────
 eval "$(/opt/homebrew/bin/brew shellenv)"
+# Local-only, the atuin reasoning: no account, no sync, no telemetry.
+# Analytics were measurably ON until 29-08-2026 (`brew analytics` said so).
+export HOMEBREW_NO_ANALYTICS=1
+# brew cat renders through bat — the "paged through bat" family.
+export HOMEBREW_BAT=1
 
 # ── SSH keys from macOS Keychain ──────────────────────────
 ssh-add --apple-load-keychain 2>/dev/null

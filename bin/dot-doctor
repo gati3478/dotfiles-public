@@ -166,6 +166,29 @@ else
   warn "delta or git not installed — skipping the delta ANSI-rider check"
 fi
 
+# rg rides the terminal's 16 ANSI colours BY DEFAULT, the eza shape
+# (measured 29-08-2026: path magenta 35, line green 32, match bold+red
+# as separate 1m and 31m — nothing but 4-bit in a fixture run). Nothing asserts a colour
+# key, so only behaviour can notice an upgrade growing a 256-colour
+# default or a --colors line creeping into the managed config. The
+# managed config is deliberately part of the run (RIPGREP_CONFIG_PATH),
+# so a palette-carrying line there fails here too.
+if command -v rg >/dev/null 2>&1; then
+  rg_fixture="$(mktemp -d)"
+  printf 'needle here\n' > "$rg_fixture/f.txt"
+  rg_out="$(RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/config" rg --color=always -n needle "$rg_fixture" 2>/dev/null)"
+  rm -rf "$rg_fixture"
+  if ! printf '%s' "$rg_out" | grep -q $'\x1b\['; then
+    bad "rg emitted no colour at all — the ANSI-rider check has nothing to prove"
+  elif printf '%s' "$rg_out" | grep -qE $'\x1b\[[0-9;]*(38|48);(5|2);'; then
+    bad "rg emitted 256-colour/truecolor SGR codes — no longer riding the 16 ANSI colours (version bump? a --colors line in the managed config?)"
+  else
+    ok "rg rides the 16 ANSI colours (4-bit output on a fixture match)"
+  fi
+else
+  warn "rg not installed — skipping the rg ANSI-rider check"
+fi
+
 # The global excludes file is a manifest row; this proves git actually
 # CONSULTS it. core.excludesFile unset falls back to the XDG path the row
 # deploys, so an override appearing in any scope would silently detach the
