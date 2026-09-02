@@ -1,22 +1,17 @@
-# Runs per LOGIN SHELL — on this machine that means per kitty tab/window,
-# not once per login session: kitty spawns each tab as a login shell (three
-# ran concurrently when measured, 27-08-2026). The placement rule survives
-# the correction — this still must not run for every `zsh -c` — but the
-# cost multiplier is tabs, not logins.
+# Per LOGIN shell — on this machine per kitty tab, which spawns each tab as
+# a login shell. Nothing here may run for every `zsh -c`; the multiplier is
+# tabs.
 
 # ── Homebrew (single source of truth) ─────────────────────
 eval "$(/opt/homebrew/bin/brew shellenv)"
-# Local-only, the atuin reasoning: no account, no sync, no telemetry.
-# Analytics were measurably ON until 29-08-2026 (`brew analytics` said so).
-export HOMEBREW_NO_ANALYTICS=1
-# brew cat renders through bat — the "paged through bat" family.
-export HOMEBREW_BAT=1
+export HOMEBREW_NO_ANALYTICS=1   # no telemetry — local-only, like atuin
+export HOMEBREW_BAT=1            # brew cat renders through bat
 
 # ── SSH keys from macOS Keychain ──────────────────────────
 ssh-add --apple-load-keychain 2>/dev/null
 
 # ── Java ──────────────────────────────────────────────────
-# `jset N` (defined in .zshrc) switches at runtime.
+# `jset N` (in .zshrc) switches at runtime.
 export JAVA_HOME="$(/usr/libexec/java_home -v 21)"
 path=("$JAVA_HOME/bin" $path)
 
@@ -30,13 +25,10 @@ path=(
 )
 export PLAYDATE_SDK_PATH="$HOME/Developer/PlaydateSDK"
 
-# Added by Antigravity CLI installer, kept as its marker so it doesn't
-# re-append on update. ⚠️ NOT redundant, as this comment claimed until
-# 27-08-2026: under `typeset -U` a re-assignment keeps the FIRST
-# occurrence, so this line MOVES ~/.local/bin ahead of the claude-switch
-# shim — measured: a login non-interactive shell resolved the real claude
-# binary first, bypassing account routing. The re-front below restores the
-# shim for that quadrant; .zshrc does the same for interactive shells.
+# The Antigravity installer's line, kept as its marker so an update does
+# not re-append it. Not redundant: under `typeset -U` a re-assignment keeps
+# the FIRST occurrence, so this moves ~/.local/bin ahead of the
+# claude-switch shim and the next line puts the shim back.
 export PATH="$HOME/.local/bin:$PATH"
 path=("$HOME/.local/share/claude-switch/bin" $path)
 

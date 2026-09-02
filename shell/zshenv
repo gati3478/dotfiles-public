@@ -1,50 +1,37 @@
-# Runs for EVERY zsh (login, interactive, scripts, `zsh -c`).
-# Keep minimal — anything slow here multiplies across every subshell.
+# Runs for EVERY zsh — login, interactive, scripts, `zsh -c`. Anything slow
+# here multiplies across every subshell.
 
-# Dedupe PATH entries automatically — covers .zprofile and .zshrc additions.
-typeset -U path PATH
-
-# User-local binaries (used by both interactive and non-interactive shells).
+typeset -U path PATH             # every later prepend is idempotent
+# User-local and cargo binaries for every shell, build scripts and hooks
+# included; cargo guarded so removing rust cannot break every shell.
 path=("$HOME/.local/bin" $path)
-
-# Cargo binaries available in non-interactive zsh (build scripts, hooks).
-# Guarded so removing rust doesn't break every shell.
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
 # ── Claude Code: per-directory account selection (concurrency-safe) ─────────
-# A PATH shim (~/.local/share/claude-switch/bin/claude) auto-selects the WORK
-# account under the work-tree prefix (CC_WORK_PREFIX) and PERSONAL elsewhere — for every
-# launch that resolves `claude` via PATH: interactive, `zsh -c`, and scripts/
-# subprocesses that inherit this PATH. It mirrors manage-once assets (skills/
-# plugins/agents/commands/hooks/output-styles/workflows/settings.json/CLAUDE.md/
-# keybindings.json, per-project memory/) from ~/.claude into ~/.claude-work on
-# launch, and unions user-scope MCP servers between the two .claude.json files (both directions,
-# launching side wins, minus CC_MCP_EXCLUDE — so adds propagate; edits and
-# removals go through claude-mcp-rm below). Each account keeps its own
-# .claude.json/projects/sessions/history, so personal + work run CONCURRENTLY.
-# Per-account only: the login, claude.ai connectors, and per-project permission
-# grants — all inside .claude.json. The shim has the full logic.
-# (.zshrc re-prepends this so it also wins in login/interactive shells where the
-# installer re-fronts ~/.local/bin.) NOT reachable: GUI .app / cron launches —
-# for those set CC_ACCOUNT=work in the launcher's environment.
+# The shim at ~/.local/share/claude-switch/bin/claude picks the WORK account
+# under CC_WORK_PREFIX and PERSONAL elsewhere, for every launch that resolves
+# `claude` via PATH; it mirrors manage-once assets into ~/.claude-work and
+# unions user-scope MCP servers both ways (launching side wins, minus
+# CC_MCP_EXCLUDE). Login, connectors and per-project grants stay per
+# account, so both run concurrently. The shim has the logic; the vault's
+# dual-account note has the reasoning. Not reached by GUI or cron launches —
+# set CC_ACCOUNT=work in their environment. (.zprofile re-fronts this
+# directory after an installer line; .zshrc after `mise activate`.)
 path=("$HOME/.local/share/claude-switch/bin" $path)
 
-# Force a specific account from any directory (calls the shim directly, so it
-# works even if PATH ordering ever changes):
+# Force an account from any directory. The shim is called by path, so PATH
+# order cannot matter.
 claude-work()     { CC_ACCOUNT=work     "$HOME/.local/share/claude-switch/bin/claude" "$@"; }
 claude-personal() { CC_ACCOUNT=personal "$HOME/.local/share/claude-switch/bin/claude" "$@"; }
-# Resync now: refresh asset links AND union user-scope MCP servers both ways,
-# without relaunching. Exits non-zero (and says why) if either pull was skipped
-# — a held lock, a missing .claude.json, no jq.
+# Resync without relaunching; exits non-zero and says why if a pull was
+# skipped (held lock, missing .claude.json, no jq).
 claude-sync() {
   CC_SYNC_ONLY=1 "$HOME/.local/share/claude-switch/bin/claude" \
     && print "claude-sync: assets linked, MCP servers unioned both ways"
 }
-
-# Remove a user-scope MCP server from BOTH accounts. The launch-time union is
-# additive, so a one-sided `claude mcp remove` is re-added at the next launch.
-# To EDIT a server: claude-mcp-rm it, then `claude mcp add -s user …` once —
-# the add propagates on its own.
+# Remove a user-scope MCP server from BOTH accounts — the launch-time union
+# would re-add a one-sided removal. To edit a server: remove it here, then
+# `claude mcp add -s user …` once; the add propagates.
 claude-mcp-rm() {
   local s="$HOME/.local/share/claude-switch/bin/claude" n
   for n in "$@"; do
@@ -53,24 +40,13 @@ claude-mcp-rm() {
   done
 }
 
-# ── Editor ─────────────────────────────────────────────────────────────────
-# Lives here rather than in .zshrc because the consumers are NOT interactive
-# shells: `git commit` with no -m, `git rebase -i`, `visudo` and friends read
-# $EDITOR from whatever environment they were spawned in. Two string exports
-# cost nothing measurable, so the "keep .zshenv minimal" rule is satisfied.
-#
-# Unset until 14-08-2026, which meant all of the above silently fell through
-# to **vi** — a modal editor, against the non-modal principle in
-# the source repo's docs/preferences.md. That is the defect this block fixes,
-# not a preference tweak.
-#
-# `--wait` is load-bearing: without it the CLI returns instantly, git sees an
-# empty buffer and aborts the commit.
-#
-# The fallback is nano, deliberately NOT vi: over SSH there is no GUI to open,
-# and the whole point of the principle is that the headless case must not land
-# in modal editing either. Guarded on the binary too, so a machine without Zed
-# degrades instead of failing.
+# ── Editor ─────────────────────────────────────────────────
+# Here, not .zshrc: `git commit`, `git rebase -i` and visudo read $EDITOR
+# from whatever spawned them. --wait is load-bearing — without it git sees
+# an empty buffer and aborts. The fallback is nano, deliberately not vi: the
+# headless case must not land in modal editing (the non-modal criterion in
+# preferences.md). Guarded on the binary, so a machine without Zed degrades
+# instead of failing.
 if [ -n "$SSH_CONNECTION" ] || ! command -v zed >/dev/null 2>&1; then
   export EDITOR='nano'
 else
@@ -78,15 +54,12 @@ else
 fi
 export VISUAL="$EDITOR"
 
-# ── ripgrep ────────────────────────────────────────────────────────────────
-# rg reads a config only when this names one; without the export every flag
-# in that file is dead text. Lives here rather than .zshrc because rg's
-# callers are not interactive shells — editor searches, scripts, agent tool
-# calls — and the scope agreement (--hidden matching GLOB_DOTS and fd) is
-# for all of them. A static export costs nothing, so "keep .zshenv minimal"
-# holds. CLI flags override, so nothing is locked in.
+# ── ripgrep ────────────────────────────────────────────────
+# rg reads a config only when this names one. Here because rg's callers —
+# editor searches, scripts, agent tool calls — are not interactive shells,
+# and the scope agreement (--hidden, like GLOB_DOTS and fd) is for all of
+# them. Flags on the command line still override.
 export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/config"
 
-# Machine-specific overrides (work paths, employer-specific values).
-# Absent on a fresh clone, which is why the guard is here.
+# Machine-specific overrides; absent on a fresh clone.
 [ -f "$HOME/.zshenv.local" ] && source "$HOME/.zshenv.local"
