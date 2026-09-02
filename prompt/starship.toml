@@ -18,6 +18,11 @@ show_always = true
 
 [directory]
 format = "[$path]($style) "
+# false: name the directory the process is IN, not $PWD. cship runs starship
+# with cwd = the session's directory but inherits claude's launch-time $PWD, so
+# a worktree session named the launch directory on line 1 (02-09-2026). No
+# project or vault path here is a symlink, so the shell prompt is unaffected.
+use_logical_path = false
 style = "bold #ebdbb2"
 truncation_length = 3
 

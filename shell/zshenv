@@ -40,7 +40,6 @@ claude-sync() {
   CC_SYNC_ONLY=1 "$HOME/.local/share/claude-switch/bin/claude" \
     && print "claude-sync: assets linked, MCP servers unioned both ways"
 }
-claude-sync-work() { claude-sync; }   # old name, kept for muscle memory
 
 # Remove a user-scope MCP server from BOTH accounts. The launch-time union is
 # additive, so a one-sided `claude mcp remove` is re-added at the next launch.

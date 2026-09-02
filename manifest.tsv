@@ -15,6 +15,7 @@ git/ignore	~/.config/git/ignore	link
 gh/config.yml	~/.config/gh/config.yml	copy
 ripgrep/config	~/.config/ripgrep/config	link
 bin/mcp-context7.sh	~/.local/bin/mcp-context7.sh	link	0755
+shell/hushlogin	~/.hushlogin	link
 editor/zed/settings.json	~/.config/zed/settings.json	link
 editor/zed/keymap.json	~/.config/zed/keymap.json	link
 editor/zed/tasks.json	~/.config/zed/tasks.json	link

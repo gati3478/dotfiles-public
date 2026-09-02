@@ -20,18 +20,6 @@ ssh-add --apple-load-keychain 2>/dev/null
 export JAVA_HOME="$(/usr/libexec/java_home -v 21)"
 path=("$JAVA_HOME/bin" $path)
 
-# ── pyenv — RETIRED 14-08-2026, replaced by mise ──────────
-# mise owns python (and node) now; see the Runtimes block in .zshrc. pyenv
-# stays installed but uninitialised so a rollback is restoring five lines
-# rather than reinstalling a toolchain.
-#
-# Nothing replaces this block at login. pyenv split PATH-only init (here) from
-# shim/widget init (.zshrc) to keep login shells cheap; `mise activate` does
-# both jobs in one place and only in interactive shells — which is where node
-# and python were already scoped, since the old nvm PATH prepend also lived in
-# .zshrc. Scope is therefore unchanged by this migration, deliberately: GUI
-# and cron launches could not see node or python before and still cannot.
-
 # ── Installer-added paths ─────────────────────────────────
 path=(
   "$HOME/Library/Application Support/JetBrains/Toolbox/scripts"

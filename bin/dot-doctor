@@ -226,30 +226,17 @@ if [ "$(git -C "$REPO" config --get core.fsmonitor 2>/dev/null)" = "true" ]; the
   fi
 fi
 
-# The two checks below need real files at $REPO/<src>. In the checked-out
-# repo that's public/prompt/cship.toml and public/shell/zshrc, but this
-# same script is also staged verbatim into the flattened public mirror
-# (see dot-publish), where there is no public/ prefix at all — the row's
-# source there is just prompt/cship.toml / shell/zshrc. Deriving the path
-# from manifest.tsv (present, correctly stripped, in both layouts) instead
-# of hardcoding "public/..." is what makes one script correct in both.
+# The check below needs a real file at $REPO/<src>. In the checked-out repo
+# that's public/shell/zshrc, but this same script is also staged verbatim
+# into the flattened public mirror (see dot-publish), where there is no
+# public/ prefix at all — the row's source there is just shell/zshrc.
+# Deriving the path from manifest.tsv (present, correctly stripped, in both
+# layouts) instead of hardcoding "public/..." is what makes one script
+# correct in both. (A cship `width` vs `tput cols` comparison lived here until
+# 02-09-2026; cship never reads `width` in a terminal — see docs/traps.md.)
 manifest_src_for_target() {
   awk -F'\t' -v t="$1" '$2 == t { print $1; exit }' "$MANIFEST"
 }
-
-# cship's width is derived from kitty's window geometry.
-cship_src="$(manifest_src_for_target '~/.config/cship.toml')"
-if [ -n "$cship_src" ] && [ -f "$REPO/$cship_src" ]; then
-  cship_width=$(awk -F'= *' '/^width/{print $2; exit}' "$REPO/$cship_src")
-  actual_cols=$(tput cols 2>/dev/null || echo 0)
-  if [ "$cship_width" = "$actual_cols" ]; then
-    ok "cship width $cship_width matches terminal columns"
-  else
-    warn "cship width $cship_width vs actual $actual_cols — expected in a resized window; misaligns the statusline if kitty geometry changed permanently"
-  fi
-else
-  warn "cship.toml not found via manifest (~/.config/cship.toml) — skipping width check"
-fi
 
 # z-sy-h must be the last thing that creates or wraps ZLE widgets. `zle -N`
 # (and `zle -C`) create widgets directly, without going through `source` or
@@ -283,6 +270,23 @@ if ls "$HOME"/.zcompdump-* >/dev/null 2>&1; then
   ok "zcompdump is version-suffixed"
 else
   bad "zcompdump is not version-suffixed — a zsh upgrade can serve a stale dump"
+fi
+
+# kitty starts every tab through /usr/bin/login (`login -f -l -p $USER …`,
+# read off the process table), and login prints "Last login: …" until
+# ~/.hushlogin exists — a manifest row since 02-09-2026. The row proves the
+# file is deployed; this proves the mechanism the file exists for is the one
+# in play, so the pair says "a new tab opens at the prompt". The effect was
+# proven once, both ways, with kitty's exact invocation under a PTY; it is
+# NOT re-run here because every `login -f` leaves a utmpx record (`last`
+# showed one per probe that day). Silent when kitty is not running — the
+# mirror's CI, or a Mac with no tab open.
+if pgrep -qf "/usr/bin/login -f -l -p $USER " 2>/dev/null; then
+  if [ -f "$HOME/.hushlogin" ]; then
+    ok "kitty tabs start through login, and ~/.hushlogin keeps the banner off"
+  else
+    bad "kitty tabs start through login and ~/.hushlogin is missing — every new tab opens under a 'Last login' banner"
+  fi
 fi
 
 # The public mirror must not silently fall behind. Honours $DOT_MIRROR, the

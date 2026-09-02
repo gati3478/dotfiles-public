@@ -7,6 +7,39 @@ if command -v tmux &>/dev/null && [[ -z "$TMUX" && $- == *i* && -n "$SSH_CONNECT
   exec tmux new-session -A -s remote
 fi
 
+# ── Shell Options ────────────────────────────────────────
+# Must precede the Completion block below: its 24h dump-staleness check
+# uses the (#q…) glob-qualifier syntax, which requires EXTENDED_GLOB to
+# be recognized at all. Without it, "#" has no special meaning, so the
+# whole $ZCOMPDUMP(#qN.mh+24) token is just literal text concatenated
+# onto the path — never empty, so the guard silently never fires and
+# `compinit -C` (the cached fast path) never runs.
+setopt EXTENDED_GLOB           # required by the (#q…) check in Completion
+setopt AUTO_CD
+setopt CORRECT
+setopt INTERACTIVE_COMMENTS
+setopt NO_BEEP
+setopt GLOB_DOTS
+# `>` refuses to overwrite an existing file; `>|` is the deliberate
+# override (adopted 26-08-2026).
+setopt NO_CLOBBER
+# Adopted 27-08-2026 from the zsh 5.9 re-sweep (zshoptions/zshparam):
+setopt ALWAYS_TO_END           # completing mid-word parks the cursor at word end
+setopt COMPLETE_IN_WORD        # …and completes from both ends, not just the tail
+setopt NO_FLOW_CONTROL         # an accidental Ctrl+S no longer wedges the terminal
+# `*` orders file2 before file10 — the order the names read in, not the
+# bytes (adopted 02-09-2026, zshoptions).
+setopt NUMERIC_GLOB_SORT
+# Spelling correction never offers completion functions (_git for a git typo).
+CORRECT_IGNORE='_*'
+# Commands over 10s of CPU time print timing stats unasked. CPU, not wall
+# clock — a slow network wait never triggers it.
+REPORTTIME=10
+# Platform-standard word motion: every non-alphanumeric is a boundary, so
+# option+arrow stops at path segments and Ctrl+W kills one segment, not the
+# whole path. (zsh's default glues *?_-.[]~=/&;!#$%^(){}<> into words.)
+WORDCHARS=''
+
 # ── History ──────────────────────────────────────────────
 HISTFILE=~/.zsh_history
 HISTSIZE=100000
@@ -25,35 +58,79 @@ setopt HIST_FIND_NO_DUPS
 setopt HIST_FCNTL_LOCK
 setopt HIST_SAVE_NO_DUPS
 
-# ── Shell Options ────────────────────────────────────────
-# Must precede the Completion block below: its 24h dump-staleness check
-# uses the (#q…) glob-qualifier syntax, which requires EXTENDED_GLOB to
-# be recognized at all. Without it, "#" has no special meaning, so the
-# whole $ZCOMPDUMP(#qN.mh+24) token is just literal text concatenated
-# onto the path — never empty, so the guard silently never fires and
-# `compinit -C` (the cached fast path) never runs.
-setopt EXTENDED_GLOB           # required by the (#q…) check in Completion
-setopt AUTO_CD
-setopt CORRECT
-setopt INTERACTIVE_COMMENTS
-setopt NO_BEEP
-setopt GLOB_DOTS
-# Adopted 26-08-2026: `>` refuses to overwrite an existing file; `>|` is
-# the deliberate override.
-setopt NO_CLOBBER
-# Adopted 27-08-2026 from the zsh 5.9 re-sweep (zshoptions/zshparam):
-setopt ALWAYS_TO_END           # completing mid-word parks the cursor at word end
-setopt COMPLETE_IN_WORD        # …and completes from both ends, not just the tail
-setopt NO_FLOW_CONTROL         # an accidental Ctrl+S no longer wedges the terminal
-# Spelling correction never offers completion functions (_git for a git typo).
-CORRECT_IGNORE='_*'
-# Commands over 10s of CPU time print timing stats unasked. CPU, not wall
-# clock — a slow network wait never triggers it.
-REPORTTIME=10
-# Platform-standard word motion: every non-alphanumeric is a boundary, so
-# option+arrow stops at path segments and Ctrl+W kills one segment, not the
-# whole path. (zsh's default glues *?_-.[]~=/&;!#$%^(){}<> into words.)
-WORDCHARS=''
+# ── Key Bindings ─────────────────────────────────────────
+# Emacs keymap by declaration, and before any binding. zsh picks viins
+# whenever $VISUAL or $EDITOR contains "vi" (zshzle, "Keymaps"), so without
+# this line the keymap is a side effect of the editor's name — a future
+# `nvim` fallback in .zshenv would flip the prompt into modal editing with
+# no line here changing. First, because a binding made while `main` points
+# at viins lives in viins and is lost when the keymap switches (measured
+# 02-09-2026: bound before `bindkey -e`, Shift+Tab read back undefined).
+bindkey -e
+
+# history-search-backward matches on the FIRST WORD of the buffer only, so
+# `git com` + Up searched for `git` and discarded `com` — it never did the
+# prefix search its old comment claimed. history-beginning-search-backward
+# matches the line up to the cursor, which is the intended behaviour.
+# The -end variants additionally park the cursor at end of line rather
+# than leaving it mid-line where the match happened to start.
+autoload -Uz history-search-end
+zle -N history-beginning-search-backward-end history-search-end
+zle -N history-beginning-search-forward-end  history-search-end
+bindkey '^[[A' history-beginning-search-backward-end   # Up:   prefix search
+bindkey '^[[B' history-beginning-search-forward-end    # Down: prefix search
+# The same two keys in application-cursor mode (DECCKM), which is what a
+# TUI that died without resetting the terminal leaves behind. /etc/zshrc
+# binds these encodings from terminfo to up-line-or-search — the first-word
+# search this block exists to replace — so the protected binding was one
+# stale terminal mode away from silently degrading (found 02-09-2026).
+bindkey '^[OA' history-beginning-search-backward-end
+bindkey '^[OB' history-beginning-search-forward-end
+
+# Platform-standard motion, in the encodings kitty actually sends at a zsh
+# prompt: its terminfo names kLFT3/kRIT3/kDC3 for the option+ combinations,
+# and its shipped keyboard-protocol doc gives the legacy rule for the rest —
+# CSI 1;<1 + modifier bits>, super being 8, so cmd+arrow arrives as CSI 1;9.
+# zsh's defaults stop at the bare arrows, and /etc/zshrc binds Home/End only
+# from terminfo, whose entries are the application-mode forms (SS3 H/F) zsh
+# never asks the terminal for. The arrows, Home and End were confirmed at the
+# keyboard 02-09-2026, the day they were bound; until then the emptied
+# WORDCHARS only ever reached option+b/f and Ctrl+W.
+bindkey '^[[1;3D' backward-word       # option+left
+bindkey '^[[1;3C' forward-word        # option+right
+bindkey '^[[3;3~' kill-word           # option+fn+delete (option+delete is ^[^?, bound by default)
+bindkey '^[[H' beginning-of-line      # Home, as kitty sends it
+bindkey '^[[F' end-of-line            # End
+bindkey '^[OH' beginning-of-line      # Home/End in application mode, pinned
+bindkey '^[OF' end-of-line            # here rather than left to /etc/zshrc
+bindkey '^[[1;9D' beginning-of-line   # cmd+left
+bindkey '^[[1;9C' end-of-line         # cmd+right
+# fn+delete. /etc/zshrc already binds it from terminfo (kdch1 is the same
+# CSI 3 ~ in both modes); pinned here 02-09-2026 for the reason above — the
+# taste must not depend on a system file.
+bindkey '^[[3~' delete-char
+
+# Shift+Tab walks the completion menu backwards. kitty sends ESC [ Z
+# (terminfo kcbt); the main keymap left it undefined and the menuselect
+# keymap ships with only Tab, Enter and the arrows. The module is loaded
+# here explicitly because `bindkey -M menuselect` needs the keymap to exist
+# already — `menu select` alone loads it lazily on first use (adopted
+# 02-09-2026).
+zmodload zsh/complist
+bindkey '^[[Z' reverse-menu-complete
+bindkey -M menuselect '^[[Z' reverse-menu-complete
+
+# Pasted text renders plain, not standout — the last surface where a paste
+# was not clean. Only the paste context is overridden; every other
+# zle_highlight default stays (zshzle: "used to override a default").
+zle_highlight=('paste:none')
+
+# Ctrl+X Ctrl+E edits the buffer in $EDITOR (zed --wait), as in ksh — a
+# multi-line command stops being nursed through ZLE. Creates a widget, so
+# it must stay above the z-sy-h source line (adopted 27-08-2026).
+autoload -Uz edit-command-line
+zle -N edit-command-line
+bindkey '^X^E' edit-command-line
 
 # ── Completion ───────────────────────────────────────────
 # Docker Desktop's zsh completion lives here.
@@ -66,21 +143,31 @@ autoload -Uz compinit
 ZCOMPDUMP="$HOME/.zcompdump-$ZSH_VERSION"
 # Rebuild if older than 24h, otherwise use the cached fast path.
 # ⚠️ Do NOT cite a saving here. traps.md's compinit entry measured the naive
-# comparison and found the real everyday delta indistinguishable from noise;
-# this line used to quote the misleading 0.22s-vs-0.02s figures it refutes.
+# comparison and found the real everyday delta indistinguishable from noise.
 if [[ -n $ZCOMPDUMP(#qN.mh+24) ]]; then
   compinit -d "$ZCOMPDUMP"
 else
   compinit -C -d "$ZCOMPDUMP"
 fi
 zstyle ':completion:*' menu select
-zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+# Case-insensitive first; if that finds nothing, a fragment of each
+# segment is enough — `f.b` reaches foo.bar, `z-a` reaches
+# zsh-autosuggestions — still case-insensitively (the second spec repeats
+# the first, because specs are tried in turn, not merged). Adopted
+# 02-09-2026 (zshcompsys).
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'm:{a-zA-Z}={A-Za-z} r:|[._-]=* r:|=*'
+# File completion (02-09-2026): directories in their own group ahead of
+# files, `foo//bar` read as the one path it is, an existing directory
+# prefix accepted without re-scanning its parents, and a position line
+# when a menu outgrows the screen instead of a bare list.
+zstyle ':completion:*' list-dirs-first true
+zstyle ':completion:*' squeeze-slashes true
+zstyle ':completion:*' accept-exact-dirs true
+zstyle ':completion:*' select-prompt '%SScrolling active: current selection at %p%s'
 # Coloured by file type in the terminal's 16 colours. The codes live HERE
 # deliberately rather than in an exported LS_COLORS: eza reads LS_COLORS as
 # an override, so exporting these would downgrade its richer per-extension
-# built-ins (measured 27-08-2026 — eza's own defaults are pure 4-bit). The
-# ${(s.:.)LS_COLORS} expansion this replaces was empty when measured
-# (27-08-2026), and no managed file ever set the variable.
+# built-ins (measured 27-08-2026 — eza's own defaults are pure 4-bit).
 zstyle ':completion:*' list-colors 'di=01;34:ln=01;36:so=01;35:pi=33:ex=01;32:bd=01;33:cd=01;33:su=31:sg=31:tw=01;34:ow=01;34'
 # Labelled sections instead of one pile, and a deterministic message instead
 # of silence when nothing matches (adopted 27-08-2026, zshcompsys sweep).
@@ -105,53 +192,40 @@ zstyle ':completion:*:*:*:users' ignored-patterns '_*' daemon nobody root
 _ssh_config_hosts=(${(f)"$(awk '/^[[:space:]]*[Hh]ost[[:space:]]/{for(i=2;i<=NF;i++) if ($i !~ /[*?!]/) print $i}' ~/.ssh/config 2>/dev/null)"})
 zstyle ':completion:*:(ssh|scp|sftp|rsync|mosh|ssh-copy-id):*' hosts $_ssh_config_hosts
 
-# ── Key Bindings ─────────────────────────────────────────
-# history-search-backward matches on the FIRST WORD of the buffer only, so
-# `git com` + Up searched for `git` and discarded `com` — it never did the
-# prefix search its old comment claimed. history-beginning-search-backward
-# matches the line up to the cursor, which is the intended behaviour.
-# The -end variants additionally park the cursor at end of line rather
-# than leaving it mid-line where the match happened to start.
-autoload -Uz history-search-end
-zle -N history-beginning-search-backward-end history-search-end
-zle -N history-beginning-search-forward-end  history-search-end
-bindkey '^[[A' history-beginning-search-backward-end   # Up:   prefix search
-bindkey '^[[B' history-beginning-search-forward-end    # Down: prefix search
-
-# Pasted text renders plain, not standout — the last surface where a paste
-# was not clean. Only the paste context is overridden; every other
-# zle_highlight default stays (zshzle: "used to override a default").
-zle_highlight=('paste:none')
-
-# Ctrl+X Ctrl+E edits the buffer in $EDITOR (zed --wait), as in ksh — a
-# multi-line command stops being nursed through ZLE. Creates a widget, so
-# it must stay above the z-sy-h source line (adopted 27-08-2026).
-autoload -Uz edit-command-line
-zle -N edit-command-line
-bindkey '^X^E' edit-command-line
+# ── Help ─────────────────────────────────────────────────
+# Esc-h opens the manual for the command under the cursor, subcommand-aware:
+# `git commit` reaches git-commit(1), `sudo cmd` reaches cmd's page. zsh ships
+# run-help as an alias to plain man — the autoloaded function plus its
+# helpers (zshcontrib) is what knows about subcommands, and the alias would
+# shadow it, hence the unalias. Renders through bat via MANPAGER below.
+# Adopted 02-09-2026 and proven the same day through the widget itself under
+# a PTY — the subcommand path reads ZLE's buffer stack, which nothing but
+# the widget fills, so `run-help git commit` typed or run with -c cannot
+# reach it (traps.md).
+unalias run-help 2>/dev/null
+autoload -Uz run-help run-help-git run-help-sudo run-help-openssl
 
 # ── Runtimes: node + python (mise) ───────────────────────
-# Replaces pyenv AND nvm as of 14-08-2026. One binary, one config
-# (~/.config/mise/config.toml), per-directory versions, and no lazy-loading
-# shim to hand-write — the nvm block this removed existed only to defer a
-# ~350 ms `nvm.sh` source that mise does not incur in the first place.
-#
-# Migrated versions are the ones that were live: node 24.16.0, python 3.12.x.
-# ⚠️ python moved 3.12.2 -> 3.12.14 (same minor, latest patch). NOT cosmetic:
-# mise refuses 3.12.2 because no GitHub artifact attestations exist for a
-# Feb-2024 release. Disabling attestation verification was the alternative and
-# was rejected — bypassing a supply-chain check to install an older
-# interpreter is the wrong trade. All 36 packages from the pyenv environment
-# were reinstalled and their imports verified.
+# One binary, one config (~/.config/mise/config.toml), per-directory
+# versions, and no lazy-loading shim to hand-write. Replaced pyenv and nvm
+# on 14-08-2026; both stay installed, uninitialised.
 #
 # ⚠️ SDKMAN and `jset` are deliberately NOT migrated. mise wants to manage its
 # own JDKs, which fights the Homebrew temurin casks already installed, and
 # `jset` carries a guard against macOS `java_home` silently resolving to a
 # non-matching JDK that mise offers no equivalent for.
-#
-# Rollback: delete this line, restore the pyenv blocks in .zprofile/.zshrc and
-# the nvm block below. Both tools are still installed.
 eval "$(mise activate zsh)"
+# mise's activate script hooks BOTH chpwd and precmd, and the precmd hook
+# spawns `mise hook-env` on every prompt but the first and the one after a
+# cd — 14.8 ms ± 1.5 measured 02-09-2026 (hyperfine, 20 runs), a quarter of
+# the prompt's whole budget.
+# Its `hook_env.chpwd_only` setting was tried first and is inert in
+# 2026.9.0 (18.0 ms with it; the activate script is byte-identical), and a
+# cache TTL cannot beat the ~10 ms process floor. So the hook is removed by
+# hand; the chpwd hook stays, so a directory's tool set still switches on
+# every cd. The one cost: a mise config edited IN PLACE applies on the next
+# directory change (`cd .` counts), not the next prompt.
+add-zsh-hook -d precmd _mise_hook_precmd
 
 # ── Java ─────────────────────────────────────────────────
 # Default JDK is set once per login in .zprofile.
@@ -180,6 +254,16 @@ jset() {
   path=("$JAVA_HOME/bin" $path)
 }
 
+# ── SDKMAN (lazy) ────────────────────────────────────────
+# Spring Boot CLI is on PATH via .zprofile. Init only loads if you
+# actually invoke `sdk` (install/upgrade/list/use).
+export SDKMAN_DIR="$HOME/.sdkman"
+sdk() {
+  unfunction sdk
+  source "$SDKMAN_DIR/bin/sdkman-init.sh"
+  sdk "$@"
+}
+
 # ── Modern CLI Tools ─────────────────────────────────────
 # fzf 0.74 walks with its own built-in walker unless told otherwise (an
 # earlier comment here said it shells out to `find` — refuted 26-08-2026
@@ -193,6 +277,11 @@ jset() {
 # search ignored files because its file_scan_exclusions never walks the heavy
 # build directories, whereas fzf here has no such exclusion list.
 export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git'
+# Not a mirror for tidiness: fzf's Ctrl+T widget runs with
+# FZF_DEFAULT_COMMAND=${FZF_CTRL_T_COMMAND:-} (key-bindings.zsh 0.74.3), so
+# an unset FZF_CTRL_T_COMMAND EMPTIES the default and the built-in walker
+# runs, .gitignore ignored. This line is the gate, asserted as one
+# (02-09-2026).
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 export FZF_ALT_C_COMMAND='fd --type d --hidden --exclude .git'
 
@@ -207,6 +296,16 @@ export FZF_DEFAULT_OPTS='--color=16'
 # both previews stay in-palette (adopted 27-08-2026, fzf 0.74 sweep).
 export FZF_CTRL_T_OPTS='--preview "bat --color=always --style=numbers --line-range=:200 {}"'
 export FZF_ALT_C_OPTS='--preview "eza -1 --icons=auto --color=always {}"'
+
+# `**<TAB>` — fzf's path completion — walks with fd through these two hooks.
+# Without them fzf falls back to its built-in walker, which knows nothing of
+# .gitignore, so `zed **<TAB>` and Ctrl+T disagreed about what exists
+# (measured 02-09-2026 against completion.zsh 0.74.3: the hook is looked up
+# by name at call time, so its position here is free). Same scope as the
+# commands above — hidden yes, .git no — minus the file/dir split, because
+# path completion offers both.
+_fzf_compgen_path() { fd --hidden --exclude .git . "$1"; }
+_fzf_compgen_dir()  { fd --type d --hidden --exclude .git . "$1"; }
 
 # Set BEFORE `fzf --zsh` below. The widgets read these at invocation rather
 # than at bind time, so the order is not strictly required — but a reader
@@ -229,20 +328,24 @@ fi
 # ⚠️ --disable-up-arrow is REQUIRED, not cosmetic. atuin binds Up by default,
 # which would silently replace the prefix search bound in the Key Bindings
 # section above — a stated preference in the source repo's docs/preferences.md
-# ("matches
-# everything typed so far, not just the first word"), and one that cost a
-# real bug to get right. Up/Down stay as they are.
+# ("matches everything typed so far, not just the first word"), and one that
+# cost a real bug to get right. Up/Down stay as they are.
 #
 # Local-only: no account, no sync — which is also why --disable-ai:
 # atuin 18.19 binds `?` to Atuin AI by default (found by the 26-08-2026
-# audit), and an AI keybinding has no place in a local-only history.
-# ("no network" was overclaimed here until 27-08-2026: the update check —
-# at most hourly, per 18.19's own needs_update_check — is on, deliberately;
-# its notice is this surface's version-bump re-trigger signal, the same
-# reasoning that kept kitty's 24h one.)
+# audit), and an AI keybinding has no place in a local-only history. The
+# update check — at most hourly, per 18.19's own needs_update_check — stays
+# on deliberately: its notice is this surface's version-bump re-trigger
+# signal, the same reasoning that kept kitty's 24h one.
 # `atuin import auto` seeded it from ~/.zsh_history on 14-08-2026; since
 # 27-08-2026 config.toml is a manifest row (search-UI columns, workspaces,
 # tmux popup — the sweep's adoptions).
+#
+# This init ALSO sets ZSH_AUTOSUGGEST_STRATEGY=(atuin) — present in the
+# script since 18.19 at least — so the ghost text below the cursor is a
+# prefix match over atuin's store, not zsh's in-memory history. Live since
+# atuin was adopted, recorded nowhere until 02-09-2026, and kept: the same
+# store answers Ctrl+R and the suggestion. dot-doctor pins it live.
 #
 # Guarded like fzf above: `zle -N` needs a real TTY, and Claude Code's
 # `zsh -i -c` is interactive without one.
@@ -250,11 +353,12 @@ if [[ -t 1 ]]; then
   eval "$(atuin init zsh --disable-up-arrow --disable-ai)"
 fi
 
+# ── Pagers ───────────────────────────────────────────────
 # man renders unstyled without this; bat is already trusted as kitty's
 # scrollback pager and carries `--theme=ansi` from ~/.config/bat/config, so
-# man pages inherit the terminal palette rather than fighting it.
-# (A MANROFFOPT='-c' for groff lived here — macOS man is mandoc and never
-# reads it; measured 26-08-2026, removed.)
+# man pages inherit the terminal palette rather than fighting it. macOS man
+# is mandoc, so a MANROFFOPT for groff would never be read (measured
+# 26-08-2026).
 export MANPAGER="sh -c 'col -bx | bat --language=man --plain'"
 # One lever for every pager: bat's less, delta's less, and a bare
 # `… | less` all read $LESS. -i folds case until the pattern carries a
@@ -264,20 +368,29 @@ export MANPAGER="sh -c 'col -bx | bat --language=man --plain'"
 # --mouse is deliberately absent: less grabbing the mouse takes selection
 # hostage, so copy-on-select inside a pager dies with it.
 export LESS='-iRF --incsearch'
+
+# ── Directories and listings ─────────────────────────────
 eval "$(zoxide init zsh)"               # z <partial-path> to jump directories
 # --hyperlink=auto (real terminals only) makes every entry kitty-clickable
 # — the same instinct as hg below. Adopted 27-08-2026 from the eza sweep.
 # The =auto is load-bearing, not style: bare --hyperlink greedily consumes
 # the next positional, so `ls <path>` errors (caught by the 27-08 audit).
-alias ls="eza --icons=auto --hyperlink=auto"
-alias ll="eza -la --icons=auto --git --hyperlink=auto"
-alias lt="eza -T --icons=auto --git-ignore --hyperlink=auto"
-# (an `alias t` for LOCAL tmux attach lived here — deleted 27-08-2026: one
-# recorded use ever, and a local session is what the SSH-only law prevents.)
+# Directories list first — the rule completion's list-dirs-first applies to
+# the menu, applied to the listing (02-09-2026).
+alias ls="eza --icons=auto --hyperlink=auto --group-directories-first"
+alias ll="eza -la --icons=auto --git --hyperlink=auto --group-directories-first"
+alias lt="eza -T --icons=auto --git-ignore --hyperlink=auto --group-directories-first"
 alias hg='kitty +kitten hyperlinked_grep'  # Clickable grep results (open in editor)
 alias fp='kitty +kitten choose-files'      # Keyboard file picker with previews
 
 # ── Zsh Plugins ──────────────────────────────────────────
+# Bind the suggestion widgets once, at the first prompt, instead of
+# re-wrapping every widget on every precmd — upstream's own performance
+# lever, 7 ms per prompt measured 02-09-2026 (20 rebinds in 142 ms). Safe
+# because nothing creates a ZLE widget after z-sy-h, which dot-doctor
+# asserts structurally; a plugin added below it would need a manual
+# `_zsh_autosuggest_bind_widgets`.
+ZSH_AUTOSUGGEST_MANUAL_REBIND=1
 # Guarded: a fresh adopter without `brew install zsh-autosuggestions` gets
 # a silent no-op here instead of a "no such file" error on every
 # interactive shell. bootstrap's dependency check names the formula so it
@@ -288,30 +401,9 @@ alias fp='kitty +kitten choose-files'      # Keyboard file picker with previews
 # ── Starship Prompt ──────────────────────────────────────
 eval "$(starship init zsh)"
 
-# ── SDKMAN (lazy) ────────────────────────────────────────
-# Spring Boot CLI is on PATH via .zprofile. Init only loads if you
-# actually invoke `sdk` (install/upgrade/list/use).
-export SDKMAN_DIR="$HOME/.sdkman"
-sdk() {
-  unfunction sdk
-  source "$SDKMAN_DIR/bin/sdkman-init.sh"
-  sdk "$@"
-}
-
-# ── nvm — RETIRED 14-08-2026, replaced by mise ───────────
-# The lazy-load shim that lived here (PATH prepend of the newest installed
-# node, plus a self-replacing `nvm` function deferring a ~350 ms nvm.sh) was
-# a workaround for a cost mise does not have. Removing it removes the
-# workaround, not a capability.
-#
-# ~/.nvm is left on disk untouched so rollback needs no reinstall. Nothing
-# reads it any more — `nvm` is no longer a command in this shell, which is
-# the intended outcome, not an oversight.
-
 # Re-front the Claude account shim. `mise activate` above prepends its shim
 # directory, which can land ahead of this one; re-fronting keeps the account
-# shim ahead of the real binary. (Until 14-08-2026 the culprit named here was
-# nvm's PATH prepend, which no longer exists.) See ~/.zshenv.
+# shim ahead of the real binary. See ~/.zshenv.
 path=("$HOME/.local/share/claude-switch/bin" $path)
 
 # Machine-specific overrides. Absent on a fresh clone, which is why the
@@ -326,6 +418,14 @@ path=("$HOME/.local/share/claude-switch/bin" $path)
 # order-insensitive zle-line-pre-redraw hook — but the widget-wrapping
 # fallback path still exists, and the rule costs nothing to honour.
 # Nothing that creates a ZLE widget may be added below this line.
+# Two highlighters beside `main` (adopted 02-09-2026): `brackets` colours
+# each bracket by nesting level and marks the one matching the cursor —
+# structure you can see; `pattern` paints one shape red before Enter. Every
+# style involved is a named 4-bit colour, so both ride the terminal palette
+# like main's defaults do, and dot-doctor re-proves that live.
+ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets pattern)
+typeset -A ZSH_HIGHLIGHT_PATTERNS
+ZSH_HIGHLIGHT_PATTERNS+=('rm -rf *' 'fg=white,bold,bg=red')
 # Guarded like zsh-autosuggestions above: absent -> silent no-op, not a
 # "no such file" error on a fresh adopter's shell.
 [ -f /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ] && \

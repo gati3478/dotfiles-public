@@ -1,28 +1,48 @@
-# ── CShip · Gruvbox Dark Hard — 4-line layout, v1.1 (cship ≥ 1.8.1) ──────────
-# 1: directory · branch · git status · runtimes        (Starship passthrough)
+# ── CShip · Gruvbox Dark Hard — 3-line layout, v1.3 (cship ≥ 1.8.1) ──────────
+# 1: directory · branch · git state/status · runtimes  (Starship passthrough)
 # 2: model · effort · agent          ⇥ session duration (identity, fill-aligned)
 # 3: context · cost · ±lines         ⇥ 5h/7d windows    (metrics, fill-aligned)
-# 4: per-model burn (opus · sonnet · cowork)            (empty lines collapse)
 #
-# $fill right-aligns via best-effort TTY width recovery (claude-code#22115
-# tracked width passthrough; cship 1.8.1 doesn't consume it yet). `width`
-# below is the last-resort fallback — set it to your terminal's columns.
+# Nothing rendered comes from cship's OAuth path. It reads the DEFAULT keychain
+# credential regardless of CLAUDE_CONFIG_DIR (cship#194), so under the
+# dual-account shim every OAuth-fed field is the personal account's — the
+# per-model line 4 was dropped for that on 02-09-2026 (docs/blocked-upstream.md).
+# 5h/7d on line 3 arrive on stdin per session and are exact.
+#
+# $fill right-aligns to the live terminal width: cship reads the controlling
+# tty of an ancestor process, then $COLUMNS (Claude Code sets it since
+# claude-code#22115 closed, 05-2026), then `width` below, then 80. In a real
+# terminal the first two always answer, so `width` only matters where neither
+# exists — Windows, the web/desktop apps. Measured 02-09-2026: a 133-column
+# window rendered 130 cells with `width = 129` untouched.
 
 "$schema" = 'https://cship.dev/config-schema.json'
 
 [cship]
 width = 129
+# Columns Claude Code keeps around the statusline (gutter + right margin); cship's
+# default of 3 predates Claude Code 2.1.258, which keeps 4 — with 3 every
+# right-aligned line lost its last cell to an ellipsis (screenshot, 02-09-2026).
+# Re-measure after a Claude Code update: a trailing "…" on line 2 or 3 means
+# this is short again.
+width_offset = 4
+# Line 1 is starship's `format` minus the shell-only modules ($username, $jobs,
+# $cmd_duration, $character). cship runs `starship module <name>` per token and
+# never reads starship's format, so the allowlist exists twice; preferences.toml
+# pins both copies (pref.prompt_curated).
 lines = [
   """$directory\
   $git_branch\
+  $git_state\
   $git_status\
   $python\
-  $nodejs\
+  $java\
+  $kotlin\
+  $gradle\
   $rust\
-  $java""",
+  $nodejs""",
   "$cship.model $cship.effort $cship.agent$fill$cship.cost.total_duration",
   "$cship.context_bar  $cship.context_window.used_tokens  $cship.cost  $cship.cost.total_lines_added $cship.cost.total_lines_removed$fill$cship.usage_limits",
-  "$cship.usage_limits.per_model",
 ]
 
 [cship.fill]
@@ -109,14 +129,12 @@ format = "[$symbol$value]($style)"
 style  = "fg:#ebdbb2"
 
 [cship.usage_limits]
-ttl                = 120
+# ttl governs only the OAuth refetch; 5h/7d arrive on stdin every render. Nothing
+# shown comes from OAuth any more, so refetch hourly instead of every 2 minutes —
+# each failure costs one render a 2 s stall (02-09-2026).
+ttl                = 3600
 five_hour_format   = " 5h {pct}% → {reset_at}"
 seven_day_format   = " 7d {pct}% → {reset_at}"
-opus_format        = " opus {pct}%"
-sonnet_format      = " sonnet {pct}%"
-cowork_format      = " cowork {pct}%"
-oauth_apps_format  = " oauth {pct}%"
-extra_usage_format = " extra {pct}% (${used}/${limit})"
 separator          = "   "
 warn_threshold     = 70.0
 warn_style         = "fg:#fabd2f"
