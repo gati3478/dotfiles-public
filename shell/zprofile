@@ -18,7 +18,6 @@ path=("$JAVA_HOME/bin" $path)
 # ── Installer-added paths ─────────────────────────────────
 path=(
   "$HOME/Library/Application Support/JetBrains/Toolbox/scripts"
-  "/Applications/Obsidian.app/Contents/MacOS"
   "$HOME/.local/share/sonarqube-cli/bin"
   "$HOME/.sdkman/candidates/springboot/current/bin"
   $path
