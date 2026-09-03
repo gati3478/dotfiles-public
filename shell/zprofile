@@ -7,9 +7,6 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 export HOMEBREW_NO_ANALYTICS=1   # no telemetry — local-only, like atuin
 export HOMEBREW_BAT=1            # brew cat renders through bat
 
-# ── SSH keys from macOS Keychain ──────────────────────────
-ssh-add --apple-load-keychain 2>/dev/null
-
 # ── Java ──────────────────────────────────────────────────
 # `jset N` (in .zshrc) switches at runtime.
 export JAVA_HOME="$(/usr/libexec/java_home -v 21)"

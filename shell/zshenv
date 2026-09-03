@@ -61,5 +61,16 @@ export VISUAL="$EDITOR"
 # them. Flags on the command line still override.
 export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/config"
 
+# ── SSH agent ──────────────────────────────────────────────
+# Proton Pass's agent, at a fixed path. ssh reaches it through IdentityAgent
+# in ~/.ssh/config; this export is for everything else that reads the
+# variable — ssh-add -l, scripts, agent-aware tools. Here, not .zprofile:
+# hooks and scripts read it from whatever spawned them, and the guard is one
+# stat. Guarded on the socket so a machine without Pass keeps the agent it
+# has. The path is spelled twice because the preference check reads text.
+if [ -S "$HOME/.ssh/proton-pass-ssh-agent.sock" ]; then
+  export SSH_AUTH_SOCK="$HOME/.ssh/proton-pass-ssh-agent.sock"
+fi
+
 # Machine-specific overrides; absent on a fresh clone.
 [ -f "$HOME/.zshenv.local" ] && source "$HOME/.zshenv.local"

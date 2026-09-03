@@ -9,9 +9,8 @@
 Host example-remote
   HostName remote.example.com
   User youruser
-  IdentityFile ~/.ssh/id_ed25519
-  AddKeysToAgent yes
-  UseKeychain yes
+  IdentityFile ~/.ssh/id_ed25519.pub
+  IdentitiesOnly yes
   ControlMaster auto
   ControlPath ~/.ssh/cm-%r@%h:%p
   ControlPersist 10m
@@ -28,7 +27,8 @@ Host example-remote
 Host example-remote-tunnel
   HostName remote.example.com
   User youruser
-  IdentityFile ~/.ssh/id_ed25519
+  IdentityFile ~/.ssh/id_ed25519.pub
+  IdentitiesOnly yes
   ControlMaster no
   ControlPath none
   ExitOnForwardFailure yes
@@ -41,11 +41,22 @@ Host example-remote-tunnel
 Host example-lan-host
   HostName example-lan-host.local
   User youruser
-  IdentityFile ~/.ssh/id_ed25519
-  AddKeysToAgent yes
-  UseKeychain yes
+  IdentityFile ~/.ssh/id_ed25519.pub
+  IdentitiesOnly yes
   ControlMaster auto
   ControlPath ~/.ssh/cm-%r@%h:%p
   ControlPersist 10m
   ServerAliveInterval 15
   ServerAliveCountMax 3
+
+# Every host signs through a password manager's SSH agent (here Proton
+# Pass). Each IdentityFile above is the .pub: with IdentitiesOnly that
+# selects exactly one agent key per host, which matters once several keys
+# share one agent — GitHub, for one, identifies the account by the first
+# key it accepts. IdentityAgent here rather than SSH_AUTH_SOCK in a shell
+# file, because Dock-launched apps never read .zshrc and every ssh binary
+# reads this. A key the agent does not hold fails loud ("Permissions 0644 …
+# too open … Permission denied"): ssh tries the .pub as a private key and
+# never opens a private file beside it.
+Host *
+  IdentityAgent ~/.ssh/proton-pass-ssh-agent.sock
