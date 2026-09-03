@@ -49,8 +49,8 @@ Host example-lan-host
   ServerAliveInterval 15
   ServerAliveCountMax 3
 
-# Every host signs through a password manager's SSH agent (here Proton
-# Pass). Each IdentityFile above is the .pub: with IdentitiesOnly that
+# Every key-based host signs through a password manager's SSH agent (here
+# Proton Pass). Each IdentityFile above is the .pub: with IdentitiesOnly that
 # selects exactly one agent key per host, which matters once several keys
 # share one agent — GitHub, for one, identifies the account by the first
 # key it accepts. IdentityAgent here rather than SSH_AUTH_SOCK in a shell
