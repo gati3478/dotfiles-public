@@ -1,0 +1,15 @@
+# Read by kitty's open-actions matcher on top of Python's mimetypes table —
+# the 3.14 stdlib kitty bundles plus macOS's /etc/apache2/mime.types, which
+# every Python reads at init. That table has no entry for Kotlin, Gradle,
+# Svelte, .tsx, .properties or .zsh, and the Apache lines file .rs under
+# application/rls-services+xml and .ts under video/mp2t — so a `mime text/*`
+# rule alone would hand those to macOS `open`. One type per line, then its
+# extensions; a later entry overrides the table's. .yml is not here: the
+# stdlib knows it as application/yaml, which kitty remaps to text/yaml.
+text/x-kotlin kt kts
+text/x-gradle gradle
+text/x-rust rs
+text/x-svelte svelte
+text/typescript ts tsx
+text/x-properties properties
+text/x-shellscript zsh

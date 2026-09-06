@@ -241,8 +241,9 @@ eval "$(zoxide init zsh)"          # z <partial-path> jumps by frecency
 alias ls="eza --icons=auto --hyperlink=auto --group-directories-first"
 alias ll="eza -la --icons=auto --git --hyperlink=auto --group-directories-first"
 alias lt="eza -T --icons=auto --git-ignore --hyperlink=auto --group-directories-first"
-alias hg='kitty +kitten hyperlinked_grep'  # clickable grep results
-alias fp='kitty +kitten choose-files'      # keyboard file picker with previews
+# rg's own --hyperlink-format=kitty (the ripgrep config) is the clickable grep;
+# the hyperlinked-grep kitten it replaced retired 06-09-2026.
+alias fp='kitten choose-files'   # keyboard file picker with previews
 
 # ── Zsh Plugins ──────────────────────────────────────────
 # Bind the suggestion widgets once, at the first prompt, instead of on
