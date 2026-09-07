@@ -318,7 +318,9 @@ if [ -d "$REPO/publish" ]; then
   # The expected account is DERIVED from origin, not hardcoded. It read
   # `grep -q 'gati3478'` until 09-08-2026, so every other user of the mirror was
   # told their correct account was the wrong one — the same class of defect as
-  # the five hardcoded /Users/gati3478 paths parameterised in Task 20.
+  # the four-of-five hardcoded /Users/gati3478 paths parameterised in Task 20
+  # (deny.txt has the count; this line said "the five" until 07-09-2026, which
+  # disagreed with it — the fifth is kitty.conf's, and stays literal).
   origin_url=$(git -C "$REPO" remote get-url origin 2>/dev/null || echo '')
   expected_owner=$(printf '%s' "$origin_url" | sed -E 's#.*[:/]([^/]+)/[^/]+$#\1#')
   if [ -z "$expected_owner" ] || [ "$expected_owner" = "$origin_url" ]; then
@@ -364,6 +366,20 @@ if [ -d "$REPO/.githooks" ]; then
     warn "pre-commit hooks NOT enabled — run: git -C \"$REPO\" config core.hooksPath .githooks (found '${hooks_path:-unset}')"
   fi
 fi
+
+# Machine-specific checks that cannot be published. Each module prints its own
+# heading and calls ok/bad/warn from this scope; nothing here registers or
+# enumerates them, so adding one is adding a file. The extension point is
+# generic on purpose: a check written inline would ship in the mirror and
+# describe infrastructure that no deny.txt entry could catch, because none of
+# it is a secret string — it is the shape of a private setup. The mirror
+# carries no private/, so this loop finds nothing there and names nothing.
+# Each module prints its own heading for the same reason run_pref_checks does:
+# a heading printed here would leave a bare section with nothing under it.
+for _mod in "$REPO"/private/doctor.d/*.sh; do
+  [ -f "$_mod" ] && source "$_mod"
+done
+unset _mod
 
 # Asserts docs/preferences.toml against LIVE config — what the applications
 # actually render, not what this repo believes they were given. The manifest
