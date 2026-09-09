@@ -232,14 +232,14 @@ export MANPAGER="sh -c 'col -bx | bat --language=man --plain'"
 # pipes, -F prints and exits when output fits one screen, --incsearch moves
 # the match as you type. No --mouse: less grabbing the mouse kills
 # copy-on-select inside a pager.
-export LESS='-iRF --incsearch'
+export LESS='-iRF --incsearch --wordwrap'
 
 # ── Directories and listings ─────────────────────────────
 eval "$(zoxide init zsh)"          # z <partial-path> jumps by frecency
 # Every entry kitty-clickable — =auto is load-bearing, a bare --hyperlink
 # eats the next positional — and directories first, as in the completion menu.
 alias ls="eza --icons=auto --hyperlink=auto --group-directories-first"
-alias ll="eza -la --icons=auto --git --hyperlink=auto --group-directories-first"
+alias ll="eza -la --icons=auto --git --hyperlink=auto --group-directories-first --time-style=long-iso"
 alias lt="eza -T --icons=auto --git-ignore --hyperlink=auto --group-directories-first"
 # rg's own --hyperlink-format=kitty (the ripgrep config) is the clickable grep;
 # the hyperlinked-grep kitten it replaced retired 06-09-2026.
