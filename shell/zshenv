@@ -47,6 +47,10 @@ claude-mcp-rm() {
 # headless case must not land in modal editing (the non-modal criterion in
 # preferences.md). Guarded on the binary, so a machine without Zed degrades
 # instead of failing.
+# ⚠️ On THIS machine `nano` is pico — /usr/bin/nano is a symlink to
+# /usr/bin/pico and no real nano is installed — so the branch lands in an
+# editor with no rc file, and the box's nano taste cannot follow it here.
+# A recorded ceiling, not drift: preferences.md, `editor_env / mac_nano_is_pico`.
 if [ -n "$SSH_CONNECTION" ] || ! command -v zed >/dev/null 2>&1; then
   export EDITOR='nano'
 else

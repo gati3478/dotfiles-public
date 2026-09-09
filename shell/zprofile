@@ -8,9 +8,17 @@ export HOMEBREW_NO_ANALYTICS=1   # no telemetry — local-only, like atuin
 export HOMEBREW_BAT=1            # brew cat renders through bat
 
 # ── Java ──────────────────────────────────────────────────
-# `jset N` (in .zshrc) switches at runtime.
-export JAVA_HOME="$(/usr/libexec/java_home -v 21)"
-path=("$JAVA_HOME/bin" $path)
+# `jset N` (in .zshrc) switches at runtime, and guards the same trap by hand:
+# java_home's documented default is to fall back to the newest JDK when no
+# filter matches, exit 0 — so without -F, removing temurin-21 would silently
+# make every login shell's JAVA_HOME JDK 25. Guarded on the RESULT, not just
+# the flag: -F prints nothing on a miss, and the assignment alone would then
+# prepend a bare "/bin" to PATH.
+if _jh="$(/usr/libexec/java_home -F -v 21 2>/dev/null)"; then
+  export JAVA_HOME="$_jh"
+  path=("$JAVA_HOME/bin" $path)
+fi
+unset _jh
 
 # ── Installer-added paths ─────────────────────────────────
 path=(

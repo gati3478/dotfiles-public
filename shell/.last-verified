@@ -1,0 +1,11 @@
+# The Mac shell surface's sweep stamp. A closed surface re-enters on a
+# version bump, and this one had no signal for it but atuin's own update
+# notice — see docs/maintenance.md, "After a shell-tool upgrade".
+#
+# Only what nothing else can report is recorded here. `brew outdated`
+# answers for every Homebrew formula on the surface; nothing answers for
+# the two Apple ships, which move with macOS rather than with brew.
+swept        = 2026-09-09T18:37:41Z
+macos        = 26.6.2 (25G83)
+apple_zsh    = zsh 5.9 (arm64-apple-darwin25.0)
+apple_less   = less 668 (POSIX regular expressions)

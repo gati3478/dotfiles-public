@@ -195,7 +195,7 @@ export FZF_DEFAULT_OPTS='--color=16'
 # Previews answer "is this the one I mean?" before Enter; bat and eza both
 # stay in-palette.
 export FZF_CTRL_T_OPTS='--preview "bat --color=always --style=numbers --line-range=:200 {}"'
-export FZF_ALT_C_OPTS='--preview "eza -1 --icons=auto --color=always {}"'
+export FZF_ALT_C_OPTS='--preview "eza -1 --icons=auto --color=always --group-directories-first {}"'
 # `**<TAB>` walks with fd through these hooks, which fzf looks up by name;
 # without them its built-in walker ignores .gitignore. Same scope as the
 # commands above, minus the file/dir split — path completion offers both.
@@ -231,8 +231,15 @@ export MANPAGER="sh -c 'col -bx | bat --language=man --plain'"
 # case until the pattern carries a capital, -R passes ANSI through on manual
 # pipes, -F prints and exits when output fits one screen, --incsearch moves
 # the match as you type. No --mouse: less grabbing the mouse kills
-# copy-on-select inside a pager.
-export LESS='-iRF --incsearch --wordwrap'
+# copy-on-select inside a pager. -Q and --no-vbell carry NO_BEEP into the
+# pager, where the bell actually fires — a wrapped search, the end of the
+# file; -Q alone would trade the beep for a screen flash.
+export LESS='-iRF --incsearch --wordwrap -Q --no-vbell'
+# `< file` with no command runs $READNULLCMD, whose default is `more`. On
+# macOS that is the same binary as less by hard link, but invoked under the
+# other name it reads $MORE and ignores $LESS — so the one lever above
+# reaches every pager except this one until it is named here.
+export READNULLCMD=less
 
 # ── Directories and listings ─────────────────────────────
 eval "$(zoxide init zsh)"          # z <partial-path> jumps by frecency
