@@ -135,6 +135,8 @@ hourglass (5h), calendar (7d).
 | blue           | `#83a598` |
 | purple         | `#d3869b` |
 | orange         | `#fe8019` |
+| bg1 (inactive) | `#3c3836` |
+| gray (dim ink) | `#928374` |
 
 Model families: Fable `#8ec07c` · Opus `#83a598` · Sonnet `#d3869b` ·
 Haiku `#b8bb26`.

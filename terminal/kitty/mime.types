@@ -11,5 +11,9 @@ text/x-gradle gradle
 text/x-rust rs
 text/x-svelte svelte
 text/typescript ts tsx
+# .sql is not missing from the table — it is MISLABELLED, and differently from
+# .rs and .ts: macOS's Apache lines file it under application/x-sql, which is
+# not in the set kitty remaps to text/*, so a click on one left kitty entirely.
+text/x-sql sql
 text/x-properties properties
 text/x-shellscript zsh
