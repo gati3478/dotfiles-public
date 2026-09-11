@@ -56,13 +56,19 @@ Or from a clone of this repository, `./prompt/install.sh`. The script is
 short and does nothing it does not print; read it first if that is your
 habit. It
 
-1. finds cship and refuses below 1.8.2;
-2. copies `cship.toml` to `~/.config/cship.toml` — a copy, never a symlink,
-   backed up with a timestamp if one was there, left untouched if identical;
-3. asks whether to take `starship.toml` too, and what to call your account
+1. finds cship — on `PATH`, or at `~/.local/bin/cship` or `~/.cargo/bin/cship`
+   where its two installers put it — and refuses below 1.8.2;
+2. asks whether to take `starship.toml` too, and what to call your account
    (next section);
-4. adds `statusLine` to `~/.claude/settings.json` if it is not set, keeping
-   every other key. An existing entry is left alone and reported.
+3. copies `cship.toml` to `~/.config/cship.toml` — a copy, never a symlink,
+   backed up beside it as `cship.toml.pre-dotfiles.<timestamp>` if one was
+   there, left untouched if identical;
+4. wires `statusLine` in `~/.claude/settings.json` (or under
+   `CLAUDE_CONFIG_DIR`, if you set it): added when absent; taken over, after
+   the same kind of backup, when it is cship's own bare `"command": "cship"` —
+   which is what cship's installer leaves; left alone, and said so, when it
+   runs anything else. Every other key is kept; the file comes back
+   re-serialised with two-space indentation.
 
 Under a pipe the questions still reach you through the terminal. Each flag
 answers one; with both answered, or with no terminal, nothing is asked:
@@ -81,8 +87,11 @@ to `~/.claude/settings.json`
 
 `refreshInterval` re-renders on a timer, so the clock and the windows keep
 moving while a session idles; without it the line updates only on events.
-cship's own installer writes this entry without it, and rewrites the entry
-on every re-run, so after upgrading cship that way, check it.
+cship's own installer writes the entry without it — and re-run over an
+installed cship it first runs `cship uninstall`, which deletes the entry,
+then writes its bare one back, label and timer gone, your `cship.toml` left
+alone. After upgrading cship that way, run this installer again: it
+recognises the bare entry and takes it over.
 
 Took the whole repository through `bin/bootstrap`? Both files are already
 symlinked into place and none of this applies.
@@ -97,7 +106,10 @@ which then sits in every screenshot. The installer's question is the switch:
 - **A label** goes into the statusLine command as
   `CSHIP_ACCOUNT='{"organization_name":"…"}'`. cship renders it and fetches
   nothing. This is the route cship gives a multi-account launcher — the
-  process that starts cship states the account — used here for one.
+  process that starts cship states the account — used here for one. It
+  rides the entry the installer writes, so if something other than a bare
+  cship already runs there the label is not applied, and the summary says
+  so rather than pretending.
 - **Blank** puts `disabled = true` under `[cship.account]` in your copy. The
   module is gone; nothing else changes.
 
@@ -181,7 +193,9 @@ statusline in a narrow window.
   `{"organization_name":"work"}` — and cship renders that instead. `{label}`
   falls back to `{organization}` when no `[cship.account.labels]` entry
   matches, so sending the friendly name directly needs no map at all, and
-  keeps every real organisation name out of the file.
+  keeps every real organisation name out of the file. The installer wires
+  `settings.json` under `CLAUDE_CONFIG_DIR` when that is set, and both
+  accounts share one entry only if they share one settings file.
 - **Schema** — the config declares
   `"$schema" = 'https://cship.dev/config-schema.json'`, so editors with a
   TOML LSP (Taplo, even-better-toml) validate and autocomplete it.

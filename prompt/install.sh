@@ -26,7 +26,7 @@ SOURCE_URL="${PROMPT_SOURCE:-https://raw.githubusercontent.com/gati3478/dotfiles
 CSHIP_FLOOR="1.8.2"   # per-window usage tokens and CSHIP_ACCOUNT arrived here
 REFRESH_SECONDS=60    # re-render on a timer, so the clock and windows move while idle
 CONFIG_DIR="$HOME/.config"
-CLAUDE_DIR="$HOME/.claude"
+CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"   # Claude Code's own override for where settings.json lives
 SETTINGS="$CLAUDE_DIR/settings.json"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 
@@ -43,8 +43,11 @@ while [ $# -gt 0 ]; do
     --no-starship)   with_starship=no ;;
     --no-account)    account_mode=hide ;;
     --account-label)
+      case "${2:-}" in
+        ''|-*) echo "install.sh: --account-label needs a name after it (or say --no-account)" >&2; usage; exit 2 ;;
+      esac
       shift
-      account_label="${1:-}"
+      account_label="$1"
       account_mode=label
       ;;
     -h|--help) usage; exit 0 ;;
@@ -143,23 +146,42 @@ else
 fi
 
 # settings.json is probed before anything is written, so an unreadable file
-# stops the run with nothing half-done.
+# stops the run with nothing half-done. python3 is probed by running it: on a
+# Mac without the Command Line Tools, /usr/bin/python3 is a stub that exists,
+# so `command -v` alone would say yes and the first real call would abort.
 python3_bin="$(command -v python3 2>/dev/null || true)"
+if [ -n "$python3_bin" ] && ! "$python3_bin" -c 'import json' >/dev/null 2>&1; then
+  python3_bin=""
+fi
 settings_state=missing
+existing_command=""
 if [ -f "$SETTINGS" ]; then
   if [ -z "$python3_bin" ]; then
     settings_state=nopython
   else
+    # States: absent · present-cship (cship's own bare wiring, or this
+    # script's own — a lone cship path, at most a CSHIP_ACCOUNT prefix — which
+    # this config can take over) · present-other (anything customised, or
+    # another tool: left alone) · invalid.
     settings_state="$("$python3_bin" - "$SETTINGS" <<'PY'
-import json, sys
+import json, os, re, sys
 try:
     with open(sys.argv[1], encoding="utf-8") as fh:
         data = json.load(fh)
 except (OSError, ValueError):
     print("invalid"); sys.exit(0)
-print("present" if "statusLine" in data else "absent")
+entry = data.get("statusLine")
+if entry is None:
+    print("absent"); sys.exit(0)
+cmd = entry.get("command") if isinstance(entry, dict) else None
+m = re.fullmatch(r"(?:CSHIP_ACCOUNT='[^']*'\s+)?(\S+)", cmd) if isinstance(cmd, str) else None
+ours = m is not None and entry.get("type") == "command" and os.path.basename(m.group(1)) == "cship"
+print("present-cship" if ours else "present-other")
+print(cmd if isinstance(cmd, str) else json.dumps(entry))
 PY
 )"
+    existing_command="${settings_state#*$'\n'}"
+    settings_state="${settings_state%%$'\n'*}"
   fi
 fi
 if [ "$settings_state" = invalid ]; then
@@ -203,6 +225,14 @@ fi
 # ── the copies ───────────────────────────────────────────────────────────────
 # Each file is materialised as it should land, then compared with what is
 # there: an identical file is left untouched, so a re-run backs up nothing.
+backup_name() { # backup_name <file> → a name beside it that nothing holds yet
+  local b="$1.pre-dotfiles.$STAMP" n=1
+  while [ -e "$b" ] || [ -L "$b" ]; do
+    b="$1.pre-dotfiles.$STAMP.$n"
+    n=$((n + 1))
+  done
+  printf '%s' "$b"
+}
 place() { # place <materialised> <destination>
   local src="$1" dst="$2"
   if [ -d "$dst" ] && [ ! -L "$dst" ]; then
@@ -214,7 +244,8 @@ place() { # place <materialised> <destination>
       echo "unchanged       $(short "$dst")"
       return
     fi
-    local bak="$dst.pre-dotfiles.$STAMP"
+    local bak
+    bak="$(backup_name "$dst")"
     mv "$dst" "$bak"                       # a symlink moves as a symlink
     echo "backed up       $(short "$dst") -> $(short "$bak")"
   fi
@@ -251,22 +282,40 @@ if [ "$account_mode" = label ]; then
   command="CSHIP_ACCOUNT='{\"organization_name\":\"$account_label\"}' $cship_bin"
 fi
 wired="not wired"
+label_applied=no
+manual_entry="\"statusLine\": { \"type\": \"command\", \"command\": \"$command\", \"refreshInterval\": $REFRESH_SECONDS }"
 case "$settings_state" in
-  present)
-    wired="left alone — statusLine was already set"
-    echo "statusLine already set in $(short "$SETTINGS") — left as it is. This config would run:"
-    echo "  $command"
+  present-cship)
+    if [ "$existing_command" = "$command" ]; then
+      settings_state=same
+      wired="unchanged — statusLine already runs this"
+      echo "unchanged       $(short "$SETTINGS") — statusLine already runs $existing_command"
+    else
+      # cship's own installer writes `"command": "cship"` and nothing else;
+      # this config wants the same binary with a refresh timer and, if you
+      # gave one, the account label. Same tool, so it is taken over — backed
+      # up first, and said out loud.
+      settings_state=replace
+      echo "statusLine in $(short "$SETTINGS") is cship's own wiring ($existing_command) — replacing it with this config's"
+    fi
+    ;;
+  present-other)
+    wired="left alone — statusLine runs something else"
+    echo "statusLine in $(short "$SETTINGS") runs something other than a bare cship — left as it is:"
+    echo "  $existing_command"
+    echo "To switch to this config, set it by hand to:"
+    echo "  $manual_entry"
     ;;
   nopython)
-    wired="not wired — no python3"
-    echo "python3 not found, so $(short "$SETTINGS") was not edited. Add this by hand:"
-    echo "  \"statusLine\": { \"type\": \"command\", \"command\": \"$command\", \"refreshInterval\": $REFRESH_SECONDS }"
+    wired="not wired — no working python3"
+    echo "no working python3, so $(short "$SETTINGS") was not edited. Add this by hand:"
+    echo "  $manual_entry"
     ;;
   missing)
     if [ ! -d "$CLAUDE_DIR" ]; then
-      wired="not wired — no ~/.claude"
+      wired="not wired — no $(short "$CLAUDE_DIR")"
       echo "$(short "$CLAUDE_DIR") does not exist — is Claude Code installed? Once it is, add to $(short "$SETTINGS"):"
-      echo "  \"statusLine\": { \"type\": \"command\", \"command\": \"$command\", \"refreshInterval\": $REFRESH_SECONDS }"
+      echo "  $manual_entry"
     else
       printf '{}\n' > "$SETTINGS"
       settings_state=created
@@ -274,11 +323,15 @@ case "$settings_state" in
     fi
     ;;
 esac
-if [ "$settings_state" = absent ]; then
-  cp "$SETTINGS" "$SETTINGS.pre-dotfiles.$STAMP"
-  echo "backed up       $(short "$SETTINGS") -> $(short "$SETTINGS.pre-dotfiles.$STAMP")"
-fi
-if [ "$settings_state" = absent ] || [ "$settings_state" = created ]; then
+case "$settings_state" in absent|replace)
+  # A symlinked settings.json is written through — it lives where the adopter
+  # keeps it — and the backup is a copy beside the link.
+  settings_bak="$(backup_name "$SETTINGS")"
+  cp "$SETTINGS" "$settings_bak"
+  echo "backed up       $(short "$SETTINGS") -> $(short "$settings_bak")"
+  ;;
+esac
+case "$settings_state" in absent|replace|created)
   "$python3_bin" - "$SETTINGS" "$command" "$REFRESH_SECONDS" <<'PY'
 import json, sys
 path, command, refresh = sys.argv[1], sys.argv[2], int(sys.argv[3])
@@ -291,20 +344,25 @@ with open(path, "w", encoding="utf-8") as fh:
 PY
   wired="wired — statusLine runs $(short "$cship_bin") every $REFRESH_SECONDS s"
   echo "wired           $(short "$SETTINGS")"
-fi
+  ;;
+esac
+case "$settings_state" in absent|replace|created|same) label_applied=yes ;; esac
 
 # ── what happened ────────────────────────────────────────────────────────────
 echo
 echo "== summary =="
 echo "cship.toml      $(short "$CONFIG_DIR/cship.toml")"
-if [ "$with_starship" = yes ]; then
+if [ "$with_starship" = yes ] && [ -n "${STARSHIP_CONFIG:-}" ]; then
+  echo "starship.toml   $(short "$CONFIG_DIR/starship.toml") — your shell prompt reads \$STARSHIP_CONFIG instead, so it is unaffected"
+elif [ "$with_starship" = yes ]; then
   echo "starship.toml   $(short "$CONFIG_DIR/starship.toml") — your shell prompt too, from the next shell"
 else
   echo "starship.toml   left alone"
 fi
-case "$account_mode" in
-  hide)  echo "account         hidden in your copy (disabled = true under [cship.account])" ;;
-  label) echo "account         \"$account_label\", via CSHIP_ACCOUNT in the statusLine command" ;;
+case "$account_mode:$label_applied" in
+  hide:*)    echo "account         hidden in your copy (disabled = true under [cship.account])" ;;
+  label:yes) echo "account         \"$account_label\", via CSHIP_ACCOUNT in the statusLine command" ;;
+  label:no)  echo "account         \"$account_label\" NOT applied — it rides the statusLine command, which was not written (see above)" ;;
 esac
 echo "settings.json   $wired"
 echo
