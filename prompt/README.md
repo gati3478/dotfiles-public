@@ -1,7 +1,7 @@
 # cship · Gruvbox Dark Hard
 
 A three-line [Claude Code](https://claude.com/claude-code) statusline built on
-[cship](https://github.com/stephenleo/cship) ≥ 1.8.1, themed on the Gruvbox
+[cship](https://github.com/stephenleo/cship) ≥ 1.8.2, themed on the Gruvbox
 Dark Hard palette, with a matching [Starship](https://starship.rs) prompt
 config that cship reuses for its first line.
 

@@ -1,4 +1,4 @@
-# ── CShip · Gruvbox Dark Hard — 3-line layout, v1.3 (cship ≥ 1.8.1) ──────────
+# ── CShip · Gruvbox Dark Hard — 3-line layout, v1.4 (cship ≥ 1.8.2) ──────────
 # 1: directory · branch · git state/status · runtimes  (Starship passthrough)
 # 2: model · effort · agent          ⇥ session duration (identity, fill-aligned)
 # 3: context · cost · ±lines         ⇥ 5h/7d windows    (metrics, fill-aligned)
@@ -43,7 +43,7 @@ lines = [
   $rust\
   $nodejs""",
   "$cship.model $cship.effort $cship.agent$fill$cship.cost.total_duration",
-  "$cship.context_bar  $cship.context_window.used_tokens  $cship.cost  $cship.cost.total_lines_added $cship.cost.total_lines_removed$fill$cship.usage_limits",
+  "$cship.context_bar  $cship.context_window.used_tokens  $cship.cost  $cship.cost.total_lines_added $cship.cost.total_lines_removed$fill$cship.usage_limits.session   $cship.usage_limits.weekly",
 ]
 
 [cship.fill]
@@ -134,9 +134,12 @@ style  = "fg:#ebdbb2"
 # shown comes from OAuth any more, so refetch hourly instead of every 2 minutes —
 # each failure costs one render a 2 s stall (02-09-2026).
 ttl                = 3600
+# Two per-window tokens on line 3 (cship ≥ 1.8.2), each coloured by its own
+# utilisation; the composite $cship.usage_limits painted both with max(5h, 7d),
+# so a calm window wore the hot one's colour. The gap between them is literal
+# in the line, which is why there is no `separator` here.
 five_hour_format   = " 5h {pct}% → {reset_at}"
 seven_day_format   = " 7d {pct}% → {reset_at}"
-separator          = "   "
 warn_threshold     = 70.0
 warn_style         = "fg:#fabd2f"
 critical_threshold = 90.0
