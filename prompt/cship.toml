@@ -80,7 +80,7 @@ max_style    = "bold fg:#fb4934"
 # multi-account CLAUDE_CONFIG_DIR setup always shows the default account in every session, never the
 # per-config-dir `Claude Code-credentials-<hash>` token. Re-enable (drop `disabled`, re-add
 # $cship.account to line 2) once cship honors CLAUDE_CONFIG_DIR.
-# Upstream: https://github.com/stephenleo/cship/issues/194 (still open as of 2026-08-05)
+# Upstream: https://github.com/stephenleo/cship/issues/194 (still open at 1.8.3, 2026-09-11)
 [cship.account]
 disabled = true
 symbol   = "󰀄 "

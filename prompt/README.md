@@ -86,9 +86,9 @@ Requires a Nerd Font (built against FiraCode Nerd Font Mono).
 
 ## Tuning
 
-- **Terminal width** — cship 1.8.1 resolves the width for `$fill` in this
-  order: the controlling TTY of an ancestor process, then `$COLUMNS`, then
-  `width` in `cship.toml`, then 80. Claude Code sets `COLUMNS` and `LINES`
+- **Terminal width** — cship resolves the width for `$fill` in this order,
+  unchanged through 1.8.3: the controlling TTY of an ancestor process, then
+  `$COLUMNS`, then `width` in `cship.toml`, then 80. Claude Code sets `COLUMNS` and `LINES`
   before running the statusline command (it passed no width until
   [claude-code#22115](https://github.com/anthropics/claude-code/issues/22115)
   closed in May 2026), so in a real terminal the first two always answer and
