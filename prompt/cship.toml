@@ -1,13 +1,16 @@
-# ── CShip · Gruvbox Dark Hard — 3-line layout, v1.4 (cship ≥ 1.8.2) ──────────
+# ── CShip · Gruvbox Dark Hard — 3-line layout, v1.5 (cship ≥ 1.8.2) ──────────
 # 1: directory · branch · git state/status · runtimes  (Starship passthrough)
-# 2: model · effort · agent          ⇥ session duration (identity, fill-aligned)
+# 2: account · model · effort · agent ⇥ session duration (identity, fill-aligned)
 # 3: context · cost · ±lines         ⇥ 5h/7d windows    (metrics, fill-aligned)
 #
-# Nothing rendered comes from cship's OAuth path. It reads the DEFAULT keychain
-# credential regardless of CLAUDE_CONFIG_DIR (cship#194), so under the
-# dual-account shim every OAuth-fed field is the personal account's — the
-# per-model line 4 was dropped for that on 02-09-2026 (docs/blocked-upstream.md).
-# 5h/7d on line 3 arrive on stdin per session and are exact.
+# cship reads the DEFAULT keychain credential regardless of CLAUDE_CONFIG_DIR
+# (cship#194), so under the dual-account shim every field it fetches for itself
+# is the personal account's — the per-model line 4 was dropped for that on
+# 02-09-2026 (docs/blocked-upstream.md). What is left renders from stdin or from
+# the environment: 5h/7d on line 3 arrive on stdin per session and are exact, and
+# the account label on line 2 comes from CSHIP_ACCOUNT, set by the launcher that
+# picked the account. The one path back to the fetch is a launch that sets no
+# CSHIP_ACCOUNT — there the label is the default credential's, spelled in full.
 #
 # $fill right-aligns to the live terminal width: cship reads the controlling
 # tty of an ancestor process, then $COLUMNS (Claude Code sets it since
@@ -42,7 +45,7 @@ lines = [
   $gradle\
   $rust\
   $nodejs""",
-  "$cship.model $cship.effort $cship.agent$fill$cship.cost.total_duration",
+  "$cship.account $cship.model $cship.effort $cship.agent$fill$cship.cost.total_duration",
   "$cship.context_bar  $cship.context_window.used_tokens  $cship.cost  $cship.cost.total_lines_added $cship.cost.total_lines_removed$fill$cship.usage_limits.session   $cship.usage_limits.weekly",
 ]
 
@@ -50,6 +53,21 @@ lines = [
 symbol = " "
 
 # ── Line 2 · Identity ────────────────────────────────────
+
+# Fed by the launcher, not by cship's own lookup: that reads the unsuffixed
+# `Claude Code-credentials` keychain entry whatever CLAUDE_CONFIG_DIR says (cship#194), so under a
+# multi-account setup it names the default account in every session. CSHIP_ACCOUNT (cship ≥ 1.8.2)
+# lets the process that chose the account state it instead. {label} falls back to {organization}
+# when no labels map matches, so the launcher sends the friendly name as organization_name and
+# there is no mapping table to keep — which is also why this file carries no real organisation
+# name and can stay in public/. Unset — an IDE run config or a cron line that starts `claude`
+# without the launcher — cship falls back to its own lookup and renders the raw organisation
+# name (measured 11-09-2026). Such a launch gets the default credential anyway, so that is the
+# right account spelled the long way, not the wrong one.
+[cship.account]
+symbol = "󰀄 "
+format = "{label}"
+style  = "bold fg:#fabd2f"
 
 [cship.model]
 symbol = " "
@@ -75,24 +93,6 @@ medium_style = "fg:#83a598"
 high_style   = "fg:#fabd2f"
 xhigh_style  = "bold fg:#fabd2f"
 max_style    = "bold fg:#fb4934"
-
-# DISABLED — reads the default (unsuffixed) `Claude Code-credentials` keychain entry, so a
-# multi-account CLAUDE_CONFIG_DIR setup always shows the default account in every session, never the
-# per-config-dir `Claude Code-credentials-<hash>` token. Re-enable (drop `disabled`, re-add
-# $cship.account to line 2) once cship honors CLAUDE_CONFIG_DIR.
-# Upstream: https://github.com/stephenleo/cship/issues/194 (still open at 1.8.3, 2026-09-11)
-[cship.account]
-disabled = true
-symbol   = "󰀄 "
-format   = "{label}"
-style    = "bold fg:#fabd2f"
-ttl      = 86400
-
-# Maps each account's raw {organization} → a friendly label; {label} falls back to the org name if
-# unmapped. Capture your org name from a live render, then map it here.
-[cship.account.labels]
-"you@example.com's Organization" = "personal"
-"Your Company" = "work"
 
 # ── Line 3 · Metrics ─────────────────────────────────────
 

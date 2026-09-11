@@ -10,7 +10,7 @@ Both files live in this directory: `cship.toml` and `starship.toml`.
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ calliope on main [!?⇡] via v24.16.0                                                                │  1 · Starship passthrough
-│ Fable 5  high  ↳ code                                                                       30m50s │  2 · identity        ⇥ duration
+│ personal  Fable 5  high  ↳ code                                                             30m50s │  2 · identity        ⇥ duration
 │ █████░░░░░░░ 43%  43%(393k/1000k)  $3.42  +470 -122    5h 34% → Fri 4:00 AM   7d 72% → Tue 1:00 AM │  3 · metrics         ⇥ usage windows
 └────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -27,8 +27,8 @@ terminal width.)
   prompt; which modules appear is this file's own list — starship's `format`
   minus its shell-only modules — because cship runs `starship module <name>`
   per token and never reads `format`.
-- **Line 2** — model (per-family colour), reasoning effort (per-level colour),
-  active agent; session duration right-aligned via `$fill`.
+- **Line 2** — account label, model (per-family colour), reasoning effort
+  (per-level colour), active agent; session duration right-aligned via `$fill`.
 - **Line 3** — 12-cell context bar, absolute token usage `43%(393k/1000k)`,
   session cost, lines added/removed; 5-hour and 7-day usage windows
   right-aligned, each with its absolute local reset time (`72% → Tue 1:00 AM`).
@@ -39,22 +39,29 @@ usage windows 70/90 % — gold at warn, bold red at critical.
 ## Why the layout is shaped this way
 
 cship is a **layout renderer, not a data source**. Claude Code pipes session
-JSON to it on every refresh, and two data paths exist:
+JSON to it on every refresh, and three data paths exist:
 
 - **stdin** — `rate_limits`, cost, context, model. Always present, never fails.
   Everything shown here rides on it, including the 5h/7d windows.
+- **the environment** — `CSHIP_ACCOUNT`, since 1.8.2. Whatever starts `claude`
+  can hand cship a compact JSON identity, which the account module renders
+  instead of looking one up. Exact, and free of the problem below.
 - **the OAuth API** — per-model burn, extra usage, account info. cship reads
   the default keychain credential for it regardless of `CLAUDE_CONFIG_DIR`
   ([cship#194](https://github.com/stephenleo/cship/issues/194)), so in a
   multi-account setup every field it feeds belongs to the default account.
 
-This layout renders nothing from the second path, with one exception it
-cannot avoid: until the session's first API response, `rate_limits` is not on
-stdin yet and the 5h/7d figures come from the OAuth path for a few seconds.
+This layout renders nothing from the third path by design, with two
+exceptions. Until the session's first API response `rate_limits` is not on
+stdin yet, so the 5h/7d figures come from the OAuth path for a few seconds. And
+the account module falls back to it whenever `CSHIP_ACCOUNT` is unset — which
+is the single-account setup recommended under Tuning, where the fallback is the
+point rather than a flaw.
 A per-model line existed
 until 02-09-2026 and was dropped for exactly that reason; restore it
 (`$cship.usage_limits.per_model` as a fourth line, plus `opus_format` /
-`sonnet_format` / `cowork_format`) once #194 is fixed or if you run one
+`sonnet_format` / `cowork_format` / `oauth_apps_format` /
+`extra_usage_format`) once #194 is fixed or if you run one
 account. cship still performs the fetch every `ttl` seconds; a failure costs
 one render a 2 s stall and then a 30 s cooldown, never a broken row. One more
 thing worth knowing before filing a bug:
@@ -100,11 +107,25 @@ Requires a Nerd Font (built against FiraCode Nerd Font Mono).
   with 3 every right-aligned line lost its last cell to an ellipsis. It ships
   at 4. A trailing `…` on the right after a Claude Code update means it needs
   re-measuring.
-- **Account labels** — the `[cship.account]` module ships **disabled**: it
-  reads only the default keychain credential, so multi-account
-  `CLAUDE_CONFIG_DIR` setups always see the default account
-  ([cship#194](https://github.com/stephenleo/cship/issues/194)). Re-enable it
-  and fill in `[cship.account.labels]` if you run a single account.
+- **Account labels** — `[cship.account]` names whose session this is, in the
+  same gold the Starship prompt gives `$username`. Which source it reads
+  decides whether that name is right:
+  - **One account** — leave `CSHIP_ACCOUNT` unset and cship fetches the
+    profile itself. ⚠️ On a personal rather than a team account the
+    organisation name is derived from your email address, so the statusline
+    then carries that address in full — worth knowing before you screen-share.
+    `[cship.account.labels]` maps it to something shorter; if the config you
+    are mapping in is one you publish, that puts the real name in a public
+    file, which is the trade.
+  - **Several accounts**, switched with `CLAUDE_CONFIG_DIR` — cship's own
+    lookup reads the default keychain credential whichever account is running
+    ([cship#194](https://github.com/stephenleo/cship/issues/194)), so it names
+    the wrong one. Export `CSHIP_ACCOUNT` from whatever picks the account —
+    compact JSON in the profile's shape, e.g.
+    `{"organization_name":"work"}` — and cship renders that instead. `{label}`
+    falls back to `{organization}` when no `[cship.account.labels]` entry
+    matches, so sending the friendly name directly needs no map at all, and
+    keeps every real organisation name out of this file.
 - **Schema** — the config declares
   `"$schema" = 'https://cship.dev/config-schema.json'`, so editors with a
   TOML LSP (Taplo, even-better-toml) validate and autocomplete it.
@@ -112,7 +133,7 @@ Requires a Nerd Font (built against FiraCode Nerd Font Mono).
 ## Glyphs
 
 All icons are Nerd Font glyphs: microchip (model), speedometer (effort),
-account (account module, disabled), dollar (cost), clock (duration),
+account (account label), dollar (cost), clock (duration),
 hourglass (5h), calendar (7d).
 
 > [!warning] Some tooling silently flattens these glyphs into spaces
