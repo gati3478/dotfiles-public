@@ -6,6 +6,13 @@ so what is here is the whole shareable surface — nothing is elided from within
 a file (the one generated file, `manifest.tsv`, is the source manifest's public
 rows), and nothing beyond this is coming.
 
+**Want one piece, not the setup?** A directory here that carries its own
+`README.md` and `install.sh` can be taken alone: the script copies that
+directory's files into your own config — copies, never symlinks — and touches
+nothing else. Today that is [`prompt/`](prompt/README.md), the Claude Code
+statusline. Everything else installs as one setup, through `bin/bootstrap`
+under Install below.
+
 > This repo was called **`osaka-jade`** until 15-08-2026, after the kitty
 > palette it shipped at the time. The name pinned a theme choice that is
 > explicitly allowed to change, and asserted a unification the setup rejects —
@@ -50,7 +57,7 @@ spec.
 | `terminal/tmux/`  | tmux for SSH — true colour through the overrides, mouse on, a deep history, resurrect/continuum                                                                                                                                                                                                                                                              |
 | `terminal/bat/`   | one line, so `bat` rides the terminal's palette instead of carrying its own                                                                                                                                                                                                                                                                                 |
 | `terminal/ncdu/`  | one line, so ncdu draws in the terminal's palette                                                                                                                                                                                                                                                                                                          |
-| `prompt/`         | starship on the terminal palette, doubling as line 1 of the statusline, and the cship config beside it — see `prompt/README.md`                                                                                                                                                                                                                           |
+| `prompt/`         | **Stands alone — take it by itself.** The cship Claude Code statusline, with starship on the terminal palette doubling as its line 1. `prompt/README.md` is its own page and `prompt/install.sh` its own installer    |
 | `editor/zed/`     | Zed — `settings.json`, a `keymap.json` on a JetBrains base, `tasks.json`                                                                                                                                                                                                                                                                                    |
 | `editor/sublime/` | Sublime Text with a **vendored** light colour scheme (its upstream is abandoned) and Terminus configured to match                                                                                                                                                                                                                                             |
 | `git/`            | `gitconfig` — rebase on pull, auto-set upstream, prune on fetch, `rerere` — and the global `ignore`. Identity is not here; `bootstrap` asks for it                                                                                                                                                                                                       |
@@ -88,14 +95,13 @@ Every manifest row, then the semantic checks that survived the trip here —
 several probe tools the author runs, and warn rather than fail when a tool is
 absent.
 
-## Forking this
+## Taking everything
 
-Keep the manifest format and the two verbs. They know the author's machine
-through `dot-doctor`'s semantic section, which probes the tools the author
-runs and one local decision about atuin — read it and cut what is not
-yours. Replace the rows with your own files, and delete every
-directory you do not want along with its rows. The
-`prompt/` pair is the most self-contained piece if one thing is all you came
-for.
+Fork or clone, then keep the manifest format and the two verbs. They know the
+author's machine through `dot-doctor`'s semantic section, which probes the
+tools the author runs and one local decision about atuin — read it and cut
+what is not yours. Replace the rows with your own files, and delete every
+directory you do not want along with its rows. For one piece, the paragraph
+at the top of this page is the door.
 
 MIT.

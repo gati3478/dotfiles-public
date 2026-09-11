@@ -1,11 +1,11 @@
 # cship · Gruvbox Dark Hard
 
-A three-line [Claude Code](https://claude.com/claude-code) statusline built on
-[cship](https://github.com/stephenleo/cship) ≥ 1.8.2, themed on the Gruvbox
-Dark Hard palette, with a matching [Starship](https://starship.rs) prompt
-config that cship reuses for its first line.
-
-Both files live in this directory: `cship.toml` and `starship.toml`.
+A three-line statusline for [Claude Code](https://claude.com/claude-code),
+rendered by [cship](https://github.com/stephenleo/cship): where you are and
+what you are running as, how much of the context and the budget is gone, and
+when the usage windows reset. This directory is self-contained — take it
+alone. Nothing else in this repository is needed, and nothing it installs
+points back here.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -15,34 +15,122 @@ Both files live in this directory: `cship.toml` and `starship.toml`.
 └────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-(Icons omitted above — every module carries a Nerd Font glyph; see
-[Glyphs](#glyphs). Box abridged to 100 columns — real output pads to your
-terminal width.)
+Icons omitted above — the modules listed under [Glyphs](#glyphs) each carry a
+Nerd Font glyph. Box abridged to 100 columns; real output pads to your
+terminal width.
+
+## What you need
+
+**Required**
+
+- **cship 1.8.2 or newer.** Either of its own routes:
+  `curl -fsSL https://cship.dev/install.sh | bash` (the binary, a starter
+  config, and the `settings.json` wiring) or `cargo install cship` (the
+  binary only). The floor is where per-window usage tokens and `CSHIP_ACCOUNT`
+  arrived.
+- **A Nerd Font in the terminal.** Built against FiraCode Nerd Font Mono
+  (`brew install --cask font-fira-code-nerd-font`). Without one every icon is
+  a blank cell — a missing glyph fills the same width as a space, so nothing
+  looks broken; the icons are simply not there.
+- **A dark terminal.** The palette is Gruvbox Dark Hard as literal hexes,
+  chosen against its `#1d2021` ground. There is no light variant.
+
+**Optional**
+
+- **starship**, for line 1. With starship absent from `PATH`, line 1 is absent
+  and lines 2 and 3 render as normal — exit 0, no error, nothing to configure.
+  With it present, line 1 renders under **your** starship config, whatever
+  that is. `starship.toml` here is the one the picture was drawn with, and
+  taking it replaces your shell prompt, because starship reads one file for
+  both.
+
+## Install
+
+One line, no clone:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/dotfiles-public/main/prompt/install.sh | bash
+```
+
+Or from a clone of this repository, `./prompt/install.sh`. The script is
+short and does nothing it does not print; read it first if that is your
+habit. It
+
+1. finds cship and refuses below 1.8.2;
+2. copies `cship.toml` to `~/.config/cship.toml` — a copy, never a symlink,
+   backed up with a timestamp if one was there, left untouched if identical;
+3. asks whether to take `starship.toml` too, and what to call your account
+   (next section);
+4. adds `statusLine` to `~/.claude/settings.json` if it is not set, keeping
+   every other key. An existing entry is left alone and reported.
+
+Under a pipe the questions still reach you through the terminal. Each flag
+answers one; with both answered, or with no terminal, nothing is asked:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/gati3478/dotfiles-public/main/prompt/install.sh | bash -s -- --with-starship --account-label personal
+./prompt/install.sh --no-starship --no-account
+```
+
+By hand it is the same steps: copy the file, optionally the second, and add
+to `~/.claude/settings.json`
+
+```json
+"statusLine": { "type": "command", "command": "/absolute/path/to/cship", "refreshInterval": 60 }
+```
+
+`refreshInterval` re-renders on a timer, so the clock and the windows keep
+moving while a session idles; without it the line updates only on events.
+cship's own installer writes this entry without it, and rewrites the entry
+on every re-run, so after upgrading cship that way, check it.
+
+Took the whole repository through `bin/bootstrap`? Both files are already
+symlinked into place and none of this applies.
+
+## The account module, and your email
+
+`[cship.account]` on line 2 names whose session this is. Left to itself,
+cship fetches the organisation name behind your credential — and on a
+personal rather than a team account that name **is your email address**,
+which then sits in every screenshot. The installer's question is the switch:
+
+- **A label** goes into the statusLine command as
+  `CSHIP_ACCOUNT='{"organization_name":"…"}'`. cship renders it and fetches
+  nothing. This is the route cship gives a multi-account launcher — the
+  process that starts cship states the account — used here for one.
+- **Blank** puts `disabled = true` under `[cship.account]` in your copy. The
+  module is gone; nothing else changes.
+
+The shipped file carries neither: it is the author's live config, fed by a
+launcher that sets the variable per session.
 
 ## What's in the layout
 
-- **Line 1** — Starship passthrough: directory, git branch, in-progress git
-  operation, git status, runtime versions (Python, Java, Kotlin, Gradle, Rust,
-  Node). Each module's look comes from `starship.toml`, shared with your shell
-  prompt; which modules appear is this file's own list — starship's `format`
-  minus its shell-only modules — because cship runs `starship module <name>`
-  per token and never reads `format`.
+- **Line 1** — Starship passthrough: directory, git branch, commit on a
+  detached HEAD, in-progress git operation, git status, runtime versions
+  (Python, Java, Kotlin, Gradle, Rust, Node). Each module's look comes from
+  `starship.toml`; which modules appear is this file's own list — starship's
+  `format` minus its shell-only modules — because cship runs
+  `starship module <name>` per token and never reads `format`.
 - **Line 2** — account label, model (per-family colour), reasoning effort
-  (per-level colour), active agent; session duration right-aligned via `$fill`.
+  (per-level colour), active agent; session duration right-aligned via
+  `$fill`.
 - **Line 3** — 12-cell context bar, absolute token usage `43%(393k/1000k)`,
   session cost, lines added/removed; 5-hour and 7-day usage windows
-  right-aligned, each with its absolute local reset time (`72% → Tue 1:00 AM`).
+  right-aligned, each with its absolute local reset time
+  (`72% → Tue 1:00 AM`).
 
-Warn/critical thresholds are wired throughout: context 40/70 %, cost $2/$5,
-usage windows 70/90 % — gold at warn, bold red at critical.
+Warn/critical thresholds: context 40/70 %, cost $2/$5, usage windows
+70/90 % — gold at warn, bold red at critical, each a `warn_threshold` /
+`critical_threshold` pair in the file.
 
-## Why the layout is shaped this way
+## Why it is shaped this way
 
 cship is a **layout renderer, not a data source**. Claude Code pipes session
 JSON to it on every refresh, and three data paths exist:
 
-- **stdin** — `rate_limits`, cost, context, model. Always present, never fails.
-  Everything shown here rides on it, including the 5h/7d windows.
+- **stdin** — `rate_limits`, cost, context, model. Always present, never
+  fails. Everything shown here rides on it, including the 5h/7d windows.
 - **the environment** — `CSHIP_ACCOUNT`, since 1.8.2. Whatever starts `claude`
   can hand cship a compact JSON identity, which the account module renders
   instead of looking one up. Exact, and free of the problem below.
@@ -53,82 +141,53 @@ JSON to it on every refresh, and three data paths exist:
 
 This layout renders nothing from the third path by design, with two
 exceptions. Until the session's first API response `rate_limits` is not on
-stdin yet, so the 5h/7d figures come from the OAuth path for a few seconds. And
-the account module falls back to it whenever `CSHIP_ACCOUNT` is unset — which
-is the single-account setup recommended under Tuning, where the fallback is the
-point rather than a flaw.
-A per-model line existed
-until 02-09-2026 and was dropped for exactly that reason; restore it
-(`$cship.usage_limits.per_model` as a fourth line, plus `opus_format` /
-`sonnet_format` / `cowork_format` / `oauth_apps_format` /
-`extra_usage_format`) once #194 is fixed or if you run one
-account. cship still performs the fetch every `ttl` seconds; a failure costs
-one render a 2 s stall and then a 30 s cooldown, never a broken row. One more
-thing worth knowing before filing a bug:
+stdin yet, so the 5h/7d figures come from the OAuth path for a few seconds.
+And the account module falls back to it whenever `CSHIP_ACCOUNT` is unset and
+the module is not disabled — the case the section above exists for. A
+per-model line existed until 02-09-2026 and was dropped for the same reason;
+with one account it is safe to restore (`$cship.usage_limits.per_model` as a
+fourth line, plus the `opus_format` / `sonnet_format` / `cowork_format` /
+`oauth_apps_format` / `extra_usage_format` entries). cship still performs the
+OAuth fetch every `ttl` seconds; a failure costs one render a 2 s stall and
+then a 30 s cooldown, never a broken row.
 
-- **Below roughly 100 columns the metrics line's content floor exceeds the
-  render target**, so it overflows however `width` is set. Nothing to fix; a
-  reason not to run the statusline in a narrow window.
-
-## Install
-
-```sh
-cargo install cship        # or the install script from the cship README
-```
-
-Then deploy the two configs. In a clone of this tree, that is `./bin/bootstrap`,
-which symlinks them into `~/.config/` along with everything else here. Existing
-plain files are backed up before being replaced by a symlink — `ln -s` itself
-would refuse to overwrite them, but `bootstrap` handles that for you.
-
-Wire it into `~/.claude/settings.json`:
-
-```json
-{
-  "statusLine": { "type": "command", "command": "cship" }
-}
-```
-
-Requires a Nerd Font (built against FiraCode Nerd Font Mono).
+One more thing worth knowing before filing a bug: **below roughly 100
+columns the metrics line's content floor exceeds the render target**, so it
+overflows however `width` is set. Nothing to fix; a reason not to run the
+statusline in a narrow window.
 
 ## Tuning
 
 - **Terminal width** — cship resolves the width for `$fill` in this order,
   unchanged through 1.8.3: the controlling TTY of an ancestor process, then
-  `$COLUMNS`, then `width` in `cship.toml`, then 80. Claude Code sets `COLUMNS` and `LINES`
-  before running the statusline command (it passed no width until
+  `$COLUMNS`, then `width` in `cship.toml`, then 80. Claude Code sets
+  `COLUMNS` and `LINES` before running the statusline command (it passed no
+  width until
   [claude-code#22115](https://github.com/anthropics/claude-code/issues/22115)
   closed in May 2026), so in a real terminal the first two always answer and
   `width` is never read. It matters only where neither exists — Windows, the
   web and desktop apps — and there it should be your terminal's column count.
-  It ships at 129; resizing the window does not misalign anything.
+  It ships at 129; resizing a real terminal never misaligns anything, so a
+  wider or narrower window is no reason to change it.
 - **Right margin** — `width_offset` is the number of columns Claude Code keeps
   around the statusline. cship defaults to 3; Claude Code 2.1.258 keeps 4, and
   with 3 every right-aligned line lost its last cell to an ellipsis. It ships
   at 4. A trailing `…` on the right after a Claude Code update means it needs
   re-measuring.
-- **Account labels** — `[cship.account]` names whose session this is, in the
-  same gold the Starship prompt gives `$username`. Which source it reads
-  decides whether that name is right:
-  - **One account** — leave `CSHIP_ACCOUNT` unset and cship fetches the
-    profile itself. ⚠️ On a personal rather than a team account the
-    organisation name is derived from your email address, so the statusline
-    then carries that address in full — worth knowing before you screen-share.
-    `[cship.account.labels]` maps it to something shorter; if the config you
-    are mapping in is one you publish, that puts the real name in a public
-    file, which is the trade.
-  - **Several accounts**, switched with `CLAUDE_CONFIG_DIR` — cship's own
-    lookup reads the default keychain credential whichever account is running
-    ([cship#194](https://github.com/stephenleo/cship/issues/194)), so it names
-    the wrong one. Export `CSHIP_ACCOUNT` from whatever picks the account —
-    compact JSON in the profile's shape, e.g.
-    `{"organization_name":"work"}` — and cship renders that instead. `{label}`
-    falls back to `{organization}` when no `[cship.account.labels]` entry
-    matches, so sending the friendly name directly needs no map at all, and
-    keeps every real organisation name out of this file.
+- **Several accounts**, switched with `CLAUDE_CONFIG_DIR` — cship's own lookup
+  reads the default keychain credential whichever account is running
+  (cship#194), so it names the wrong one. Export `CSHIP_ACCOUNT` from whatever
+  picks the account — compact JSON in the profile's shape, e.g.
+  `{"organization_name":"work"}` — and cship renders that instead. `{label}`
+  falls back to `{organization}` when no `[cship.account.labels]` entry
+  matches, so sending the friendly name directly needs no map at all, and
+  keeps every real organisation name out of the file.
 - **Schema** — the config declares
   `"$schema" = 'https://cship.dev/config-schema.json'`, so editors with a
   TOML LSP (Taplo, even-better-toml) validate and autocomplete it.
+- **Seeing what cship sees** — `cship explain` tabulates every module's
+  value beside the config block that styles it, for when a module shows
+  nothing.
 
 ## Glyphs
 
@@ -161,6 +220,14 @@ hourglass (5h), calendar (7d).
 
 Model families: Fable `#8ec07c` · Opus `#83a598` · Sonnet `#d3869b` ·
 Haiku `#b8bb26`.
+
+## About the file itself
+
+`cship.toml` is the author's live configuration, published verbatim. Its
+comments cite files of the private source repository — `preferences.toml`,
+`docs/blocked-upstream.md` — that hold the reasoning behind a few values.
+This page carries what an adopter needs; those comments are context, not
+instructions.
 
 ## License
 
