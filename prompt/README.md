@@ -8,16 +8,17 @@ alone. Nothing else in this repository is needed, and nothing it installs
 points back here.
 
 ```
-┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ calliope on main [!?⇡] via v24.16.0                                                                │  1 · Starship passthrough
-│ personal  Fable 5  high  ↳ code                                                             30m50s │  2 · identity        ⇥ duration
-│ █████░░░░░░░ 43%  43%(393k/1000k)  $3.42  +470 -122    5h 34% → Fri 4:00 AM   7d 72% → Tue 1:00 AM │  3 · metrics         ⇥ usage windows
-└────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ calliope on   main [!?⇡] via   v24.16.0                                                              │
+│   personal   Fable 5   high ↳ code                                                            30m50s │
+│ █████░░░░░░░ 43%  43%(393k/1000k)    $3.42  +470 -122  5h 34% → Fri 4:00 AM     7d 72% → Tue 1:00 AM │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Icons omitted above — the modules listed under [Glyphs](#glyphs) each carry a
-Nerd Font glyph. Box abridged to 100 columns; real output pads to your
-terminal width.
+Rendered at 104 columns, where the metrics line has no slack left; a wider
+terminal opens the gap before the usage windows. The icons are the blank
+cells a terminal without a Nerd Font shows — the modules under
+[Glyphs](#glyphs) each carry one.
 
 ## What you need
 
@@ -52,9 +53,9 @@ One line, no clone:
 curl -fsSL https://raw.githubusercontent.com/gati3478/dotfiles-public/main/prompt/install.sh | bash
 ```
 
-Or from a clone of this repository, `./prompt/install.sh`. The script is
-short and does nothing it does not print; read it first if that is your
-habit. It
+Or from a clone of this repository, `./prompt/install.sh`. The script does
+nothing to your files that it does not print, and `--help` is its manual;
+read it first if that is your habit. It
 
 1. finds cship — on `PATH`, or at `~/.local/bin/cship` or `~/.cargo/bin/cship`
    where its two installers put it — and refuses below 1.8.2;
@@ -69,6 +70,10 @@ habit. It
    which is what cship's installer leaves; left alone, and said so, when it
    runs anything else. Every other key is kept; the file comes back
    re-serialised with two-space indentation.
+
+Every refusal — no cship, or one below the floor; a `settings.json` that is
+not valid JSON, not writable, or a symlink to nothing — comes before the
+first copy, so a stopped run has changed nothing.
 
 Under a pipe the questions still reach you through the terminal. Each flag
 answers one; with both answered, or with no terminal, nothing is asked:
@@ -93,6 +98,11 @@ then writes its bare one back, label and timer gone, your `cship.toml` left
 alone. After upgrading cship that way, run this installer again: it
 recognises the bare entry and takes it over.
 
+**Leaving.** Each backup sits beside the file it replaced, as
+`<file>.pre-dotfiles.<timestamp>`; move it back. Then remove the `statusLine`
+entry from `settings.json`, or run `cship uninstall`, which removes the entry,
+the binary and its caches and leaves `cship.toml` where it is.
+
 Took the whole repository through `bin/bootstrap`? Both files are already
 symlinked into place and none of this applies.
 
@@ -110,8 +120,9 @@ which then sits in every screenshot. The installer's question is the switch:
   rides the entry the installer writes, so if something other than a bare
   cship already runs there the label is not applied, and the summary says
   so rather than pretending.
-- **Blank** puts `disabled = true` under `[cship.account]` in your copy. The
-  module is gone; nothing else changes.
+- **Blank** puts `disabled = true` under `[cship.account]` in your copy and
+  drops the module's slot from line 2, so no blank cell is left where it
+  stood. Nothing else changes.
 
 The shipped file carries neither: it is the author's live config, fed by a
 launcher that sets the variable per session.
@@ -163,10 +174,11 @@ fourth line, plus the `opus_format` / `sonnet_format` / `cowork_format` /
 OAuth fetch every `ttl` seconds; a failure costs one render a 2 s stall and
 then a 30 s cooldown, never a broken row.
 
-One more thing worth knowing before filing a bug: **below roughly 100
-columns the metrics line's content floor exceeds the render target**, so it
-overflows however `width` is set. Nothing to fix; a reason not to run the
-statusline in a narrow window.
+One more thing worth knowing before filing a bug: **the metrics line's
+content alone runs to about 100 cells** — the picture above is exactly that
+case — so in a window narrower than that plus the right margin it overflows
+however `width` is set. Nothing to fix; a reason not to run the statusline
+in a narrow window.
 
 ## Tuning
 

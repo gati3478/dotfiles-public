@@ -6,13 +6,12 @@ so what is here is the whole shareable surface — nothing is elided from within
 a file (the one generated file, `manifest.tsv`, is the source manifest's public
 rows), and nothing beyond this is coming.
 
-**Want one piece, not the setup?** A directory here that carries its own
-`README.md` and `install.sh` can be taken alone: the script copies that
-directory's files into your own config — copies, never symlinks — wires the
-one entry that makes the tool read them, and touches nothing else; its page
-says exactly what. Today that is [`prompt/`](prompt/README.md), the Claude
-Code statusline. Everything else installs as one setup, through
-`bin/bootstrap` under Install below.
+**Want one piece, not the setup?** A directory here with its own `README.md`
+and `install.sh` can be taken alone: the script copies that directory's files
+into your config — copies, never symlinks — and wires the one entry that
+makes the tool read them; its page says exactly what it touches. Today that
+is [`prompt/`](prompt/README.md), the Claude Code statusline. Everything else
+installs as one setup, through `bin/bootstrap` under Install below.
 
 > This repo was called **`osaka-jade`** until 15-08-2026, after the kitty
 > palette it shipped at the time. The name pinned a theme choice that is
