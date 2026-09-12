@@ -1,11 +1,11 @@
 # cship · Gruvbox Dark Hard
 
 A three-line statusline for [Claude Code](https://claude.com/claude-code),
-rendered by [cship](https://github.com/stephenleo/cship): where you are and
-what you are running as, how much of the context and the budget is gone, and
-when the usage windows reset. This directory is self-contained — take it
-alone. Nothing else in this repository is needed, and nothing it installs
-points back here.
+rendered by [cship](https://github.com/stephenleo/cship): where you are,
+whose session it is and which model, how much of the context and the budget
+is gone, and when the usage windows reset. This directory is self-contained —
+take it alone. Nothing else in this repository is needed, and nothing it
+installs points back here.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -63,20 +63,25 @@ read it first if that is your habit. It
    (next section);
 3. copies `cship.toml` to `~/.config/cship.toml` — a copy, never a symlink,
    backed up beside it as `cship.toml.pre-dotfiles.<timestamp>` if one was
-   there, left untouched if identical;
+   there, left untouched if identical. A symlink there is moved aside even
+   to identical content: the copy is yours to tune;
 4. wires `statusLine` in `~/.claude/settings.json` (or under
    `CLAUDE_CONFIG_DIR`, if you set it): added when absent; taken over, after
-   the same kind of backup, when it is cship's own bare `"command": "cship"` —
-   which is what cship's installer leaves; left alone, and said so, when it
-   runs anything else. Every other key is kept; the file comes back
-   re-serialised with two-space indentation.
+   the same kind of backup, when it already runs cship — the bare
+   `"command": "cship"` its installer leaves, or an earlier run of this
+   script; left alone, and said so, when it runs anything else. Every other
+   key is kept; the file comes back re-serialised with two-space
+   indentation. When it cannot be written the exact entry to paste is
+   printed.
 
 Every refusal — no cship, or one below the floor; a `settings.json` that is
-not valid JSON, not writable, or a symlink to nothing — comes before the
-first copy, so a stopped run has changed nothing.
+not a JSON object, not writable, or a symlink to nothing; a directory or a
+read-only `~/.config` in the way — comes before the first write, so a
+stopped run has changed nothing.
 
 Under a pipe the questions still reach you through the terminal. Each flag
-answers one; with both answered, or with no terminal, nothing is asked:
+answers one; with both answered nothing is asked, and with no terminal the
+defaults are taken — `starship.toml` left alone, the account module hidden:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/gati3478/dotfiles-public/main/prompt/install.sh | bash -s -- --with-starship --account-label personal
@@ -116,10 +121,10 @@ which then sits in every screenshot. The installer's question is the switch:
 - **A label** goes into the statusLine command as
   `CSHIP_ACCOUNT='{"organization_name":"…"}'`. cship renders it and fetches
   nothing. This is the route cship gives a multi-account launcher — the
-  process that starts cship states the account — used here for one. It
-  rides the entry the installer writes, so if something other than a bare
-  cship already runs there the label is not applied, and the summary says
-  so rather than pretending.
+  process that starts cship states the account — with one account here. It
+  rides the entry the installer writes, so if something other than cship
+  already runs there the label is not applied, and the summary says so
+  rather than pretending.
 - **Blank** puts `disabled = true` under `[cship.account]` in your copy and
   drops the module's slot from line 2, so no blank cell is left where it
   stood. Nothing else changes.
@@ -245,7 +250,8 @@ hourglass (5h), calendar (7d).
 | gray (dim ink) | `#928374` |
 
 Model families: Fable `#8ec07c` · Opus `#83a598` · Sonnet `#d3869b` ·
-Haiku `#b8bb26`.
+Haiku `#b8bb26`. The table is the whole theme; `bg1` and `gray` are the
+terminal's own and no module here uses them.
 
 ## About the file itself
 

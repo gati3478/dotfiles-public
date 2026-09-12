@@ -11,7 +11,8 @@ here points back at this repo afterwards.
   from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/dotfiles-public/main/prompt/install.sh | bash -s -- [flags]
 
 It asks two questions when it has a terminal to ask on. Each flag answers
-one, and with both answered (or no terminal) it asks nothing:
+one; with both answered it asks nothing, and with no terminal it takes the
+defaults — starship.toml left alone, the account module hidden:
   --with-starship | --no-starship       take starship.toml too — this REPLACES
                                         your shell prompt, not only line 1
   --account-label NAME | --no-account   what line 2 calls your account, or
@@ -19,7 +20,8 @@ one, and with both answered (or no terminal) it asks nothing:
 
 Nothing is overwritten without a timestamped backup beside it. A statusLine
 entry that runs anything but cship is left alone. A re-run with nothing
-changed rewrites nothing. Refuses to run as root.
+changed rewrites nothing. Every refusal comes before the first write.
+Refuses to run as root.
 EOF
 }
 set -euo pipefail
@@ -43,7 +45,7 @@ while [ $# -gt 0 ]; do
     --no-starship)   with_starship=no ;;
     --no-account)    account_mode=hide ;;
     --account-label)
-      case "${2:-}" in ''|-*) die "--account-label needs a name after it (or say --no-account)" ;; esac
+      case "${2:-}" in ''|--*) die "--account-label needs a name after it (or say --no-account)" ;; esac
       shift
       account_label="$1"
       account_mode=label
@@ -56,10 +58,13 @@ done
 [ "$(id -u)" -eq 0 ] && die "refusing to run as root — this installs user files"
 
 # The label lands inside a JSON string inside a shell command line. Letters,
-# digits, space, dot, underscore, dash: nothing that needs quoting in either.
-label_ok() { [ -n "$1" ] && ! printf '%s' "$1" | LC_ALL=C grep -q '[^A-Za-z0-9._ -]'; }
+# digits, space, dot, underscore, dash — at least one not a space — and
+# nothing else: byte-wise, so a newline or a non-ASCII letter is refused too.
+label_ok() {
+  [ -n "${1// /}" ] && [ "$(printf '%s' "$1" | LC_ALL=C tr -d 'A-Za-z0-9._ -' | wc -c)" -eq 0 ]
+}
 if [ "$account_mode" = label ] && ! label_ok "$account_label"; then
-  die "--account-label: a non-empty name of letters, digits, space, '.', '_', '-' (or say --no-account)"
+  die "--account-label: a name of letters, digits, space, '.', '_', '-' (or say --no-account)"
 fi
 
 # Piped from curl, stdin is the script; questions go through the terminal
@@ -72,8 +77,8 @@ ask() { # ask <prompt> → the line typed, possibly empty
   printf '%s' "$reply"
 }
 
-# bash 3.2 (macOS) keeps the backslash in a `${x/#$HOME/\~}` replacement and a
-# bare `~` there tilde-expands back to $HOME, so neither spelling is portable.
+# bash 3.2 (macOS) keeps the backslash in a `${x/#$HOME/\~}` replacement, so
+# the ~ is spelled by hand.
 short() {
   case "$1" in
     "$HOME"|"$HOME"/*) printf '~%s' "${1#"$HOME"}" ;;
@@ -90,23 +95,25 @@ sq() {
 }
 
 # ── where the configs come from ──────────────────────────────────────────────
-# Beside this script when run from a clone; otherwise fetched from the mirror.
+# Beside this script when run from a clone; otherwise fetched from the mirror,
+# each file when it is needed.
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+fetch() { curl -fsSL "$SOURCE_URL/$1" -o "$SRC/$1" && [ -s "$SRC/$1" ] || die "could not fetch $SOURCE_URL/$1"; }
 SRC=""
 if [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/cship.toml" ]; then
   SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-fi
-WORK="$(mktemp -d)"
-trap 'rm -rf "$WORK"' EXIT
-if [ -z "$SRC" ]; then
+  origin="$(short "$SRC")"
+else
   SRC="$WORK/src"
+  origin="$SOURCE_URL"
   mkdir -p "$SRC"
   echo "== fetching from $SOURCE_URL =="
-  for f in cship.toml starship.toml; do
-    curl -fsSL "$SOURCE_URL/$f" -o "$SRC/$f" && [ -s "$SRC/$f" ] || die "could not fetch $SOURCE_URL/$f"
-  done
-  # -f already refuses a 404; this refuses a 200 that is not the file.
-  grep -q '^\[cship\]' "$SRC/cship.toml" || die "$SOURCE_URL/cship.toml is not a cship config"
+  fetch cship.toml
 fi
+# curl -f already refuses a 404; this refuses a 200 that is not the file, and
+# an empty or foreign file beside a clone.
+{ [ -s "$SRC/cship.toml" ] && grep -q '^\[cship\]' "$SRC/cship.toml"; } || die "$origin/cship.toml is not a cship config"
 
 # ── dependencies ─────────────────────────────────────────────────────────────
 echo "== dependencies =="
@@ -121,6 +128,7 @@ if [ -z "$cship_bin" ]; then
   curl -fsSL https://cship.dev/install.sh | bash     # binary + a starter config + statusLine wiring
   cargo install cship                                 # binary only"
 fi
+case "$cship_bin" in /*) ;; *) cship_bin="$(cd "$(dirname "$cship_bin")" && pwd)/${cship_bin##*/}" ;; esac   # a relative PATH entry
 cship_version="$("$cship_bin" --version 2>/dev/null | awk '{ print $2 }')"
 version_ge() { [ "$(printf '%s\n%s\n' "$1" "$2" | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)" = "$1" ]; }
 if [ -z "$cship_version" ] || ! version_ge "$cship_version" "$CSHIP_FLOOR"; then
@@ -136,18 +144,21 @@ else
 fi
 
 # ── settings.json, probed before anything is written ─────────────────────────
-# Every refusal happens here, so nothing is ever left half-done. python3 is
-# probed by running it: on a Mac without the Command Line Tools,
+# python3 is probed by running it: on a Mac without the Command Line Tools,
 # /usr/bin/python3 is a stub that exists, so `command -v` alone would say yes
 # and the first real call would abort.
 python3_bin="$(command -v python3 2>/dev/null || true)"
 if [ -n "$python3_bin" ] && ! "$python3_bin" -c 'import json' >/dev/null 2>&1; then python3_bin=""; fi
+if [ -e "$CLAUDE_DIR" ] && [ ! -d "$CLAUDE_DIR" ]; then die "$(short "$CLAUDE_DIR") is not a directory"; fi
 if [ -L "$SETTINGS" ] && [ ! -e "$SETTINGS" ]; then die "$(short "$SETTINGS") is a symlink to nothing — fix it, then re-run; nothing was changed"; fi
+if [ -d "$SETTINGS" ]; then die "$(short "$SETTINGS") is a directory"; fi
 # States: nodir (no Claude Code yet) · nopython · absent (no file, or no
-# statusLine in it) · cship (cship's own bare wiring, or this script's — a lone
-# cship path, at most a CSHIP_ACCOUNT prefix — which is taken over) · other
-# (anything else runs there: left alone).
+# statusLine in it) · cship (any entry that runs cship — its installer's bare
+# `cship`, or a lone cship path with at most a CSHIP_ACCOUNT prefix, this
+# script's own included — which is taken over) · other (anything else runs
+# there: left alone).
 existing_command=""
+existing_refresh=""
 if [ ! -d "$CLAUDE_DIR" ]; then
   settings_state=nodir
 elif [ -z "$python3_bin" ]; then
@@ -157,15 +168,21 @@ elif [ ! -f "$SETTINGS" ]; then
 else
   probe="$("$python3_bin" - "$SETTINGS" <<'PY'
 import json, os, shlex, sys
+def out(state, command="", refresh="none"):
+    print(state); print(command); print(refresh); sys.exit(0)
 try:
     with open(sys.argv[1], encoding="utf-8") as fh:
         data = json.load(fh)
 except (OSError, ValueError):
-    print("invalid"); sys.exit(0)
+    data = None
+if not isinstance(data, dict):
+    out("invalid")
 entry = data.get("statusLine")
 if entry is None:
-    print("absent"); sys.exit(0)
-cmd = entry.get("command") if isinstance(entry, dict) else None
+    out("absent")
+if not isinstance(entry, dict):
+    out("other", json.dumps(entry))
+cmd = entry.get("command")
 try:
     words = shlex.split(cmd) if isinstance(cmd, str) else []
 except ValueError:
@@ -173,13 +190,12 @@ except ValueError:
 ours = (entry.get("type") == "command" and len(words) in (1, 2)
         and (len(words) == 1 or words[0].startswith("CSHIP_ACCOUNT="))
         and os.path.basename(words[-1]) == "cship")
-print("cship" if ours else "other")
-print(cmd if isinstance(cmd, str) else json.dumps(entry))
+out("cship" if ours else "other", cmd if isinstance(cmd, str) else json.dumps(entry), entry.get("refreshInterval", "none"))
 PY
 )"
-  settings_state="${probe%%$'\n'*}"
-  existing_command="${probe#*$'\n'}"
-  [ "$settings_state" = invalid ] && die "$(short "$SETTINGS") is not valid JSON — fix it, then re-run; nothing was changed"
+  settings_state="${probe%%$'\n'*}"; probe="${probe#*$'\n'}"
+  existing_command="${probe%%$'\n'*}"; existing_refresh="${probe#*$'\n'}"
+  [ "$settings_state" = invalid ] && die "$(short "$SETTINGS") is not a JSON object — fix it, then re-run; nothing was changed"
 fi
 case "$settings_state" in absent|cship)   # the rewrite and its backup both need room
   if [ ! -w "$CLAUDE_DIR" ] || { [ -e "$SETTINGS" ] && [ ! -w "$SETTINGS" ]; }; then
@@ -196,7 +212,7 @@ if [ -z "$with_starship" ]; then
     echo "== starship =="
     echo "starship.toml here styles line 1 — and, because starship reads one file, your shell prompt."
     echo "Taking it replaces $(short "$CONFIG_DIR/starship.toml") (backed up first)."
-    case "$(ask 'Take starship.toml too? [y/N] ')" in y|Y) with_starship=yes ;; esac
+    case "$(ask 'Take starship.toml too? [y/N] ')" in [yY]*) with_starship=yes ;; esac
   fi
 fi
 if [ -z "$account_mode" ]; then
@@ -217,6 +233,21 @@ if [ -z "$account_mode" ]; then
   fi
 fi
 
+# ── the last refusals, before the first write ────────────────────────────────
+if [ -L "$CONFIG_DIR" ] && [ ! -e "$CONFIG_DIR" ]; then die "$(short "$CONFIG_DIR") is a symlink to nothing"; fi
+if [ -e "$CONFIG_DIR" ]; then
+  [ -d "$CONFIG_DIR" ] || die "$(short "$CONFIG_DIR") is not a directory"
+  [ -w "$CONFIG_DIR" ] || die "$(short "$CONFIG_DIR") is not writable — nothing was changed"
+else
+  [ -w "$HOME" ] || die "$(short "$HOME") is not writable, so $(short "$CONFIG_DIR") cannot be created"
+fi
+wanted="cship.toml"
+if [ "$with_starship" = yes ]; then wanted="cship.toml starship.toml"; fi
+for f in $wanted; do
+  if [ -d "$CONFIG_DIR/$f" ] && [ ! -L "$CONFIG_DIR/$f" ]; then die "$(short "$CONFIG_DIR/$f") is a directory"; fi
+done
+if [ "$with_starship" = yes ] && [ "$SRC" = "$WORK/src" ]; then fetch starship.toml; fi
+
 # ── the copies ───────────────────────────────────────────────────────────────
 backup_name() { # backup_name <file> → a name beside it that nothing holds yet
   local b="$1.pre-dotfiles.$STAMP" n=1
@@ -226,26 +257,28 @@ backup_name() { # backup_name <file> → a name beside it that nothing holds yet
   done
   printf '%s' "$b"
 }
-# Blank account: cship's own switch, and the module's slot — the space that
-# separated it from $cship.model would otherwise stay as a blank cell on line 2.
-# Every other byte passes through, Nerd Font glyphs included.
-hide_account() { # hide_account <source> <copy>
-  awk '
-    /^\[cship\.account\][[:space:]]*(#.*)?$/ { header++; print; print "disabled = true"; next }
-    { slot += gsub(/\$cship\.account /, ""); print }
+# The copy is the source byte for byte, or with the account hidden: cship's
+# own switch under [cship.account], and the module's slot dropped — the space
+# that separated it from $cship.model would otherwise stay as a blank cell on
+# line 2. Either way the header and the slot must each appear once, so a file
+# that is not this config is refused rather than copied. awk passes every
+# other byte through, Nerd Font glyphs included.
+prepare_copy() { # prepare_copy <source> <copy> hide|keep
+  awk -v mode="$3" '
+    /^\[cship\.account\][[:space:]]*(#.*)?$/ { header++; print; if (mode == "hide") print "disabled = true"; next }
+    { slot += gsub(/\$cship\.account /, (mode == "hide") ? "" : "&"); print }
     END { if (header != 1 || slot != 1) exit 1 }
-  ' "$1" > "$2" || die "cship.toml is not the shape this installer knows — [cship.account] and its slot in lines must each appear once"
+  ' "$1" > "$2" || die "$origin/cship.toml is not the shape this installer knows — [cship.account] and its slot in lines must each appear once"
 }
 # A file is materialised as it should land, then compared with what is there:
 # identical is left untouched, so a re-run backs up nothing. A symlink in the
-# way is moved aside, link and all — the file is being replaced, and writing
-# through the link would overwrite whatever it points at, a repo of yours say.
-# settings.json is the other case: one key merged into a file Claude Code
-# itself rewrites in place, so a symlink there is written through and its
-# backup is a copy beside the link.
+# way is moved aside, link and all, even to identical content — the file is
+# being replaced, and writing through the link would overwrite whatever it
+# points at, a repo of yours say. settings.json is the other case: one key
+# merged into a file Claude Code itself rewrites in place, so a symlink there
+# is written through and its backup is a copy beside the link.
 place() { # place <materialised> <destination>
   local src="$1" dst="$2" bak
-  [ -d "$dst" ] && [ ! -L "$dst" ] && die "$(short "$dst") is a directory"
   if [ -e "$dst" ] || [ -L "$dst" ]; then
     if [ ! -L "$dst" ] && cmp -s "$src" "$dst"; then echo "unchanged       $(short "$dst")"; return; fi
     bak="$(backup_name "$dst")"
@@ -259,11 +292,7 @@ place() { # place <materialised> <destination>
 echo
 echo "== copying =="
 [ -d "$CONFIG_DIR" ] || { mkdir -p "$CONFIG_DIR"; echo "created         $(short "$CONFIG_DIR")"; }
-if [ "$account_mode" = hide ]; then
-  hide_account "$SRC/cship.toml" "$WORK/cship.toml"
-else
-  cp "$SRC/cship.toml" "$WORK/cship.toml"
-fi
+if [ "$account_mode" = hide ]; then prepare_copy "$SRC/cship.toml" "$WORK/cship.toml" hide; else prepare_copy "$SRC/cship.toml" "$WORK/cship.toml" keep; fi
 place "$WORK/cship.toml" "$CONFIG_DIR/cship.toml"
 if [ "$with_starship" = yes ]; then
   place "$SRC/starship.toml" "$CONFIG_DIR/starship.toml"
@@ -280,10 +309,11 @@ if [ "$account_mode" = label ]; then
   # starts cship states the account, and cship fetches nothing for it.
   command="CSHIP_ACCOUNT='{\"organization_name\":\"$account_label\"}' $command"
 fi
-manual_entry="\"statusLine\": { \"type\": \"command\", \"command\": \"$command\", \"refreshInterval\": $REFRESH_SECONDS }"
+manual_entry="\"statusLine\": { \"type\": \"command\", \"command\": \"${command//\"/\\\"}\", \"refreshInterval\": $REFRESH_SECONDS }"
 wire() { # back up the file if there is one, set statusLine, keep every other key
+  local bak through=""
   if [ -f "$SETTINGS" ]; then
-    local bak; bak="$(backup_name "$SETTINGS")"
+    bak="$(backup_name "$SETTINGS")"
     cp "$SETTINGS" "$bak"
     echo "backed up       $(short "$SETTINGS") -> $(short "$bak")"
   fi
@@ -300,7 +330,8 @@ with open(path, "w", encoding="utf-8") as fh:
     json.dump(data, fh, indent=2, ensure_ascii=False)
     fh.write("\n")
 PY
-  echo "wired           $(short "$SETTINGS")"
+  if [ -L "$SETTINGS" ]; then through=" — a symlink, written through to $(readlink "$SETTINGS")"; fi
+  echo "wired           $(short "$SETTINGS")$through"
   wired="wired — statusLine runs $(short "$cship_bin") every $REFRESH_SECONDS s"
   label_applied=yes
 }
@@ -309,7 +340,7 @@ label_applied=no
 case "$settings_state" in
   absent) wire ;;
   cship)
-    if [ "$existing_command" = "$command" ]; then
+    if [ "$existing_command" = "$command" ] && [ "$existing_refresh" = "$REFRESH_SECONDS" ]; then
       echo "unchanged       $(short "$SETTINGS") — statusLine already runs this"
       wired="unchanged — statusLine already runs this"
       label_applied=yes
@@ -317,13 +348,13 @@ case "$settings_state" in
       # cship's own installer writes `"command": "cship"` and nothing else;
       # this config wants the same binary with a refresh timer and, if you
       # gave one, the label. Same tool, so it is taken over — and said.
-      echo "statusLine in $(short "$SETTINGS") is cship's own wiring ($existing_command) — replacing it with this config's"
+      echo "statusLine in $(short "$SETTINGS") runs cship already ($existing_command) — replacing it with this config's entry"
       wire
     fi
     ;;
   other)
     wired="left alone — statusLine runs something else"
-    echo "statusLine in $(short "$SETTINGS") runs something other than a bare cship — left as it is:"
+    echo "statusLine in $(short "$SETTINGS") runs something other than cship — left as it is:"
     echo "  $existing_command"
     echo "To switch to this config, set it by hand to:"
     echo "  $manual_entry"
@@ -346,7 +377,7 @@ echo "== summary =="
 echo "cship.toml      $(short "$CONFIG_DIR/cship.toml")"
 case "$with_starship:${STARSHIP_CONFIG:-}" in
   yes:)  echo "starship.toml   $(short "$CONFIG_DIR/starship.toml") — your shell prompt too, from the next shell" ;;
-  yes:*) echo "starship.toml   $(short "$CONFIG_DIR/starship.toml") — your shell prompt reads \$STARSHIP_CONFIG instead, so it is unaffected" ;;
+  yes:*) echo "starship.toml   $(short "$CONFIG_DIR/starship.toml") — but \$STARSHIP_CONFIG is set, and starship reads that for your prompt and for line 1, so the copy serves nothing until it is unset" ;;
   *)     echo "starship.toml   left alone" ;;
 esac
 case "$account_mode:$label_applied" in
