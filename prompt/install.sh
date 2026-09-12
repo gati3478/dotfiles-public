@@ -291,8 +291,8 @@ place() { # place <materialised> <destination>
 
 echo
 echo "== copying =="
-[ -d "$CONFIG_DIR" ] || { mkdir -p "$CONFIG_DIR"; echo "created         $(short "$CONFIG_DIR")"; }
 if [ "$account_mode" = hide ]; then prepare_copy "$SRC/cship.toml" "$WORK/cship.toml" hide; else prepare_copy "$SRC/cship.toml" "$WORK/cship.toml" keep; fi
+[ -d "$CONFIG_DIR" ] || { mkdir -p "$CONFIG_DIR"; echo "created         $(short "$CONFIG_DIR")"; }
 place "$WORK/cship.toml" "$CONFIG_DIR/cship.toml"
 if [ "$with_starship" = yes ]; then
   place "$SRC/starship.toml" "$CONFIG_DIR/starship.toml"
@@ -325,7 +325,10 @@ try:
         data = json.load(fh)
 except FileNotFoundError:
     data = {}
-data["statusLine"] = {"type": "command", "command": command, "refreshInterval": refresh}
+entry = data.get("statusLine")
+entry = dict(entry) if isinstance(entry, dict) else {}   # a padding you set on it stays
+entry.update({"type": "command", "command": command, "refreshInterval": refresh})
+data["statusLine"] = entry
 with open(path, "w", encoding="utf-8") as fh:
     json.dump(data, fh, indent=2, ensure_ascii=False)
     fh.write("\n")
@@ -354,7 +357,7 @@ case "$settings_state" in
     ;;
   other)
     wired="left alone — statusLine runs something else"
-    echo "statusLine in $(short "$SETTINGS") runs something other than cship — left as it is:"
+    echo "statusLine in $(short "$SETTINGS") runs something other than a bare cship — left as it is:"
     echo "  $existing_command"
     echo "To switch to this config, set it by hand to:"
     echo "  $manual_entry"
