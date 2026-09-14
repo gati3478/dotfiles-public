@@ -233,22 +233,29 @@ if command -v git >/dev/null 2>&1; then
   rm -rf "$ign_fixture"
 fi
 
-# core.fsmonitor=true is asserted as a value; this proves the daemon the
-# value promises actually runs — a status must leave one watching this
-# repo, or every status is still paying the tree walk the setting exists
-# to remove. Self-scoping: silent when the deployed config does not enable
-# it, so removing the preference does not strand a failing check.
-# Also scoped to a work tree. A ZIP download of the mirror has no .git, so
-# `config --get` fell through to the GLOBAL scope — where the deployed
-# gitconfig sets it — and a correct setup was told its daemon was missing
-# (14-09-2026, found once the $USER abort above stopped hiding this line).
-if git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
-   && [ "$(git -C "$REPO" config --get core.fsmonitor 2>/dev/null)" = "true" ]; then
-  git -C "$REPO" status --short >/dev/null 2>&1
-  if git -C "$REPO" fsmonitor--daemon status >/dev/null 2>&1; then
-    ok "fsmonitor daemon is watching this repo (core.fsmonitor=true is live; the status above starts it if it was not)"
+# core.fsmonitor is WITHDRAWN (preferences.md § Git, 15-09-2026): a prompt
+# runs git with GIT_OPTIONAL_LOCKS=0 and git will not start the daemon under
+# it, so every render pays a 1.088s handshake and falls back to the walk —
+# forever, since the prompt is the one caller that cannot start what it needs.
+# The gitcfg row reads the FILE for the key coming back; this reads git's own
+# EFFECTIVE boolean, so `1`, `yes` and `on` are caught too, and so is a value
+# arriving from a scope the manifest does not own.
+#
+# Until 15-09-2026 this block asserted the opposite, and its own `git status`
+# STARTED the daemon it then checked for — so a doctor run repaired the
+# symptom it was meant to report, in this repo only.
+#
+# Source-repo only: it asserts a decision of Gati's, not a broken setup, and
+# an adopter with a 100k-file monorepo and a daemon already running has made a
+# different call correctly. Also scoped to a work tree — a ZIP download of the
+# mirror has no .git, so `config --get` fell through to the GLOBAL scope and a
+# correct setup was told its daemon was missing (14-09-2026, found once the
+# $USER abort above stopped hiding this line).
+if [ "$SOURCE_REPO" = yes ] && git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  if [ "$(git -C "$REPO" config --type=bool --get core.fsmonitor 2>/dev/null)" = "true" ]; then
+    bad "core.fsmonitor is true in effect — withdrawn; it costs the prompt 1.088s per repo per boot (preferences.md § Git)"
   else
-    bad "core.fsmonitor=true but no daemon is watching this repo — status still walks the tree"
+    ok "core.fsmonitor is not in effect (withdrawn — a prompt cannot start its daemon)"
   fi
 fi
 
