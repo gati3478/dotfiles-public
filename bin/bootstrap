@@ -2,9 +2,10 @@
 # Adopt this setup on a fresh machine.
 #
 # Asks for the handful of values that are personal, writes them to a local
-# overlay, patches the one config kitty itself cannot template, then
-# symlinks the rest into place. Never overwrites without a backup (dot-apply
-# owns that), and never runs as root.
+# overlay, symlinks everything in the manifest into place (dot-apply owns
+# that, backups included), and finally writes the one value kitty's config
+# language cannot template into ~/.config/kitty/local.conf. Nothing it does
+# touches this clone. Never runs as root.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -63,6 +64,14 @@ if [ -n "$missing$brew_missing" ]; then
   echo "Missing:$missing$brew_missing"
   echo "On macOS:  brew install${missing}${brew_missing}"
   echo "The font is separate:  brew install --cask font-fira-code-nerd-font"
+  if [ -n "$brew_missing" ]; then
+    # Say this or the remedy loops: shell/zshrc sources the two plugins from
+    # /opt/homebrew/share by absolute path, so a Homebrew anywhere else
+    # installs them somewhere the shell will not look, and this reports them
+    # missing again after a successful install.
+    echo "Note: shell/zshrc sources those two from /opt/homebrew/share by absolute path."
+    echo "      On a Homebrew with another prefix, edit those two lines to match it."
+  fi
   ask 'Continue anyway? [y/N] ' reply
   # `y` alone was the only accepted answer, and anything else left without a
   # word: a capital Y installed nothing and said nothing (14-09-2026).
@@ -111,10 +120,9 @@ echo
 echo "== tab-title path =="
 # kitty.conf's tab_title_template collapses the working directory to '~' with
 # a Python .replace() inside kitty's own config language, which expands no
-# environment variable in this setting — kitty 0.48.2's docs list expansion
-# per option (include, shell, editor, listen_on, startup_session, env) and
-# this is not one of them. So the home to collapse must be a literal,
-# authored for one machine.
+# environment variable in this setting — measured against kitty 0.48.2, where
+# `${HOME}` in that option comes back verbatim. So the home to collapse must
+# be a literal, authored for one machine.
 #
 # It is NOT rewritten in the clone. Doing that left the clone permanently
 # dirty, and the deployed gitconfig sets pull.rebase, so `git pull` then

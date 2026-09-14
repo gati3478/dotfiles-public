@@ -74,7 +74,7 @@ directory alone.
 | `gh/`             | `config.yml` — the CLI's own preferences                                                                                                                                                                                                                                                                                                                    |
 | `ripgrep/`        | the default flags — hidden files in, `.git` out, smart case, matches that open in the editor on click                                                                                                                                                                                                                                                       |
 | `ssh/`            | `config.example` only. The real config names live hosts and is private — this is the ControlMaster/tunnel pattern, sanitised                                                                                                                                                                                                                                |
-| `bin/`            | `bootstrap`, the two verbs — `dot-apply` and `dot-doctor` — under `lib/` the one helper `dot-doctor` sources, and `mcp-context7.sh`, a stdio wrapper reading a Context7 API key from the login Keychain (service `mcp-context7`, account `$(id -un)`) so the secret stays out of `~/.claude.json`. Nothing wires that one for you: add an `mcpServers` entry whose `command` is `~/.local/bin/mcp-context7.sh`, or ignore the row                                                                                                                                                                                                                                  |
+| `bin/`            | `bootstrap`, the two verbs — `dot-apply` and `dot-doctor` — under `lib/` the one helper `dot-doctor` sources, and `mcp-context7.sh`, a stdio wrapper reading a Context7 API key from the login Keychain (service `mcp-context7`, account `$(id -un)`) so the secret stays out of `~/.claude.json`. Nothing wires that one for you: add an `mcpServers` entry whose `command` is the **absolute** path to `~/.local/bin/mcp-context7.sh` (a `~` there is not expanded by a process spawn), or ignore the row                                                                                                                                                                                                                                  |
 
 Not included, because it is not shareable: the IntelliJ IDEA config (several of
 its option files name an employer, so the whole tree is treated as private),
@@ -90,19 +90,23 @@ cd ~/dotfiles-public && ./bin/bootstrap
 
 `bootstrap` asks for your name and email and writes them to
 `~/.gitconfig.local`, creates two empty overlays the shell config reads if you
-ever fill them in (`~/.zshenv.local`, `~/.zprofile.local`), symlinks everything
-in the manifest into place, and finally writes `~/.config/kitty/local.conf`
-with the one path kitty's config language cannot template — your home
-directory, which `kitty.conf` collapses to `~` in tab titles and can only name
-as a literal.
+ever fill them in (`~/.zshenv.local`, `~/.zprofile.local`), deploys every
+manifest row, and finally writes `~/.config/kitty/local.conf` with the one path
+kitty's config language cannot template — your home directory, which
+`kitty.conf` collapses to `~` in tab titles and can only name as a literal.
 
-**It does not modify your clone**, so `git pull` keeps working. Existing plain
-files are backed up beside themselves as `<file>.pre-dotfiles` before being
-replaced by a symlink, and an existing `~/.gitconfig.local` is backed up with a
-timestamp. An existing **symlink** in the way is replaced and its old target
-printed rather than saved — the file it pointed at is untouched. The **copied**
-files — Sublime's, kitty's theme file, gh's config — are overwritten directly,
-so back those up yourself if you have already customised them.
+**It does not modify your clone**, so `git pull` keeps working. What it does to
+a file already sitting where a row goes depends on the row:
+
+- **`link` rows.** A plain file is copied beside itself as
+  `<file>.pre-dotfiles` first. A symlink is replaced and its old target
+  printed, not saved — the file it pointed at is untouched.
+- **`copy` rows** — Sublime's, kitty's theme file, gh's config. A plain file is
+  **overwritten with no backup**, so save it yourself if you have customised
+  it. A symlink is moved aside to `<file>.pre-dotfiles` rather than written
+  through, which would have destroyed whatever it pointed at.
+
+`~/.gitconfig.local` is not a manifest row and is backed up with a timestamp.
 
 ## Verifying it afterwards
 
