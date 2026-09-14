@@ -19,7 +19,6 @@
 [core]
 	autocrlf = input
 	pager = delta
-	fsmonitor = true
 	untrackedCache = true
 [init]
 	defaultBranch = main
