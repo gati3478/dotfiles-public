@@ -48,6 +48,13 @@ than by oversight. The `dot-doctor` shipped here runs the manifest rows and
 the semantic checks; the preference section is simply absent without its
 spec.
 
+**Comments here cite pages that are not here.** Several of these configs, and
+`bin/dot-doctor`, name `docs/preferences.md`, `docs/traps.md` or
+`decisions.md` — pages of that private repo holding the measurement behind a
+warning or the reasoning behind a value. Nothing here reads them and nothing
+breaks without them; they are context, not instructions. `prompt/README.md`
+says the same about `cship.toml` for anyone who takes that directory alone.
+
 ## What you get
 
 | Directory         | Holds                                                                                                                                                                                                                                                                                                                                                       |
@@ -56,7 +63,7 @@ spec.
 | `terminal/kitty/` | kitty — the palette as its own included `current-theme.conf`, the typeface with ligatures, the caret, copy-on-select, scrollback paged through `bat`, a silent bell, and the click half of the shell seam: `open-actions.conf` plus a `mime.types` for the extensions Python's table gets wrong, and `choose-files.conf` so the keyboard file picker agrees with the shell about which files exist |
 | `terminal/tmux/`  | tmux for SSH — true colour through the overrides, mouse on, a deep history, resurrect/continuum                                                                                                                                                                                                                                                              |
 | `terminal/bat/`   | one line, so `bat` rides the terminal's palette instead of carrying its own                                                                                                                                                                                                                                                                                 |
-| `terminal/ncdu/`  | one line, so ncdu draws in the terminal's palette                                                                                                                                                                                                                                                                                                          |
+| `terminal/ncdu/`  | one setting, so ncdu draws in the terminal's palette                                                                                                                                                                                                                                                                                                          |
 | `prompt/`         | **Stands alone — take it by itself.** The cship Claude Code statusline, with starship on the terminal palette doubling as its line 1. `prompt/README.md` is its own page and `prompt/install.sh` its own installer    |
 | `editor/zed/`     | Zed — `settings.json`, a `keymap.json` on a JetBrains base, `tasks.json`                                                                                                                                                                                                                                                                                    |
 | `editor/sublime/` | Sublime Text with a **vendored** light colour scheme (its upstream is abandoned) and Terminus configured to match                                                                                                                                                                                                                                             |
@@ -64,7 +71,7 @@ spec.
 | `gh/`             | `config.yml` — the CLI's own preferences                                                                                                                                                                                                                                                                                                                    |
 | `ripgrep/`        | the default flags — hidden files in, `.git` out, smart case, matches that open in the editor on click                                                                                                                                                                                                                                                       |
 | `ssh/`            | `config.example` only. The real config names live hosts and is private — this is the ControlMaster/tunnel pattern, sanitised                                                                                                                                                                                                                                |
-| `bin/`            | `bootstrap`, a Keychain-reading stdio wrapper for the Context7 MCP server, and the two verbs — `dot-apply` and `dot-doctor`                                                                                                                                                                                                                                  |
+| `bin/`            | `bootstrap`, a Keychain-reading stdio wrapper for the Context7 MCP server, the two verbs — `dot-apply` and `dot-doctor` — and under `lib/` the one helper `dot-doctor` sources                                                                                                                                                                                                                                  |
 
 Not included, because it is not shareable: the IntelliJ IDEA config (several of
 its option files name an employer, so the whole tree is treated as private),
@@ -79,8 +86,9 @@ cd ~/dotfiles-public && ./bin/bootstrap
 ```
 
 `bootstrap` asks for your name and email, writes them to `~/.gitconfig.local`,
-rewrites the one path kitty's config language cannot template, then symlinks
-the rest into place. Existing plain files are backed up before being replaced by
+creates two empty overlays the shell config reads if you ever fill them in
+(`~/.zshenv.local`, `~/.zprofile.local`), rewrites the one path kitty's
+config language cannot template, then symlinks the rest into place. Existing plain files are backed up before being replaced by
 a symlink; the **copied** files — Sublime's, kitty's theme file, gh's config —
 are overwritten directly, so back those up yourself if you have already
 customised them.

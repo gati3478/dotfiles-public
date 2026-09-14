@@ -45,7 +45,11 @@ while [ $# -gt 0 ]; do
     --no-starship)   with_starship=no ;;
     --no-account)    account_mode=hide ;;
     --account-label)
-      case "${2:-}" in ''|--*) die "--account-label needs a name after it (or say --no-account)" ;; esac
+      # `-*`, not `--*`: the guard exists to catch a forgotten name followed
+      # by a flag, and reading only long flags let `--account-label -x` take
+      # `-x` as the label. A label that genuinely starts with a dash is the
+      # price, and nobody has one.
+      case "${2:-}" in ''|-*) die "--account-label needs a name after it (or say --no-account)" ;; esac
       shift
       account_label="$1"
       account_mode=label
@@ -130,6 +134,10 @@ if [ -z "$cship_bin" ]; then
 fi
 case "$cship_bin" in /*) ;; *) cship_bin="$(cd "$(dirname "$cship_bin")" && pwd)/${cship_bin##*/}" ;; esac   # a relative PATH entry
 cship_version="$("$cship_bin" --version 2>/dev/null | awk '{ print $2 }')"
+# cship prints a bare `1.8.3` today. If upstream ever tags with a `v`, the
+# comparison below would sort `v1.9.0` under `1.8.2` and refuse every
+# install — telling an adopter their NEWER cship is too old.
+cship_version="${cship_version#v}"
 version_ge() { [ "$(printf '%s\n%s\n' "$1" "$2" | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)" = "$1" ]; }
 if [ -z "$cship_version" ] || ! version_ge "$cship_version" "$CSHIP_FLOOR"; then
   die "cship $cship_version at $cship_bin — this config needs $CSHIP_FLOOR or newer"

@@ -217,7 +217,12 @@ fi
 # repo, or every status is still paying the tree walk the setting exists
 # to remove. Self-scoping: silent when the deployed config does not enable
 # it, so removing the preference does not strand a failing check.
-if [ "$(git -C "$REPO" config --get core.fsmonitor 2>/dev/null)" = "true" ]; then
+# Also scoped to a work tree. A ZIP download of the mirror has no .git, so
+# `config --get` fell through to the GLOBAL scope — where the deployed
+# gitconfig sets it — and a correct setup was told its daemon was missing
+# (14-09-2026, found once the $USER abort above stopped hiding this line).
+if git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+   && [ "$(git -C "$REPO" config --get core.fsmonitor 2>/dev/null)" = "true" ]; then
   git -C "$REPO" status --short >/dev/null 2>&1
   if git -C "$REPO" fsmonitor--daemon status >/dev/null 2>&1; then
     ok "fsmonitor daemon is watching this repo (core.fsmonitor=true is live)"
@@ -266,10 +271,17 @@ else
   ok "~/.zsh/completions absent (deleted per D4)"
 fi
 
+# Three states, not two. An unsuffixed dump is the defect; NO dump is a
+# machine where zsh has not started under this config yet — the state a
+# fresh clone is in the moment bootstrap finishes, and the run the mirror's
+# README invites next. Failing there told an adopter their correct install
+# was broken (found 14-09-2026 from a fresh clone; one zsh makes it green).
 if ls "$HOME"/.zcompdump-* >/dev/null 2>&1; then
   ok "zcompdump is version-suffixed"
+elif [ -e "$HOME/.zcompdump" ]; then
+  bad "~/.zcompdump is not version-suffixed — a zsh upgrade can serve a stale dump"
 else
-  bad "zcompdump is not version-suffixed — a zsh upgrade can serve a stale dump"
+  warn "no zcompdump yet — open a zsh once, then re-run (compinit writes ~/.zcompdump-\$ZSH_VERSION)"
 fi
 
 # kitty starts every tab through /usr/bin/login (`login -f -l -p $USER …`,
@@ -281,7 +293,11 @@ fi
 # NOT re-run here because every `login -f` leaves a utmpx record (`last`
 # showed one per probe that day). Silent when kitty is not running — the
 # mirror's CI, or a Mac with no tab open.
-if pgrep -qf "/usr/bin/login -f -l -p $USER " 2>/dev/null; then
+# $USER is unset under `env -i` (a sandboxed test, cron, a container), and
+# `set -u` turned that into an abort that skipped every check below — found
+# 14-09-2026 running this script from a fresh clone of the mirror. No $USER,
+# no kitty tab to ask about: silent, like kitty not running.
+if [ -n "${USER:-}" ] && pgrep -qf "/usr/bin/login -f -l -p $USER " 2>/dev/null; then
   if [ -f "$HOME/.hushlogin" ]; then
     ok "kitty tabs start through login, and ~/.hushlogin keeps the banner off"
   else

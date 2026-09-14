@@ -20,6 +20,15 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 
 expand() { printf '%s' "${1/#\~/$HOME}"; }
+# The other direction, for printing. `${1/#$HOME/\~}` keeps the backslash in
+# bash — the same trap public/prompt/install.sh names — so a first run said
+# `CREATED DIR     \~/.config/kitty` once per directory it made (14-09-2026).
+short() {
+  case "$1" in
+    "$HOME"|"$HOME"/*) printf '~%s' "${1#"$HOME"}" ;;
+    *) printf '%s' "$1" ;;
+  esac
+}
 
 applied=0
 rows_seen=0
@@ -55,7 +64,7 @@ while IFS=$'\t' read -r src tgt mode perms; do
   # visible — an unexpected line here means a manifest path has gone stale.
   tgt_dir="$(dirname "$abs_tgt")"
   if [ ! -d "$tgt_dir" ]; then
-    echo "CREATED DIR     ${tgt_dir/#$HOME/\~}" >&2
+    echo "CREATED DIR     $(short "$tgt_dir")" >&2
     mkdir -p "$tgt_dir"
   fi
 

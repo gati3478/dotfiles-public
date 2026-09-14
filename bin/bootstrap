@@ -14,6 +14,18 @@ if [ "$(id -u)" -eq 0 ]; then
   exit 1
 fi
 
+# Answers arrive on plain stdin: this is run from a clone, so stdin is the
+# terminal. At end of input `read` returns non-zero and `set -e` stopped the
+# script with no word said — a pipe, or `</dev/null`, printed a prompt and
+# quit (14-09-2026).
+ask() { # ask <prompt> <variable> — the line typed, or a stated stop
+  printf '%s' "$1"
+  if ! IFS= read -r "$2"; then
+    printf '\nbootstrap: no answer on stdin — run it from a terminal, in a clone: ./bin/bootstrap\n' >&2
+    exit 1
+  fi
+}
+
 echo "== dependencies =="
 missing=""
 for tool in kitty zsh starship fzf zoxide eza bat git; do
@@ -37,15 +49,19 @@ if [ -n "$missing$brew_missing" ]; then
   echo "Missing:$missing$brew_missing"
   echo "On macOS:  brew install${missing}${brew_missing}"
   echo "The font is separate:  brew install --cask font-fira-code-nerd-font"
-  printf 'Continue anyway? [y/N] '
-  read -r reply
-  [ "$reply" = "y" ] || exit 1
+  ask 'Continue anyway? [y/N] ' reply
+  # `y` alone was the only accepted answer, and anything else left without a
+  # word: a capital Y installed nothing and said nothing (14-09-2026).
+  case "$reply" in
+    [yY]*) ;;
+    *) echo "bootstrap: stopped — nothing was changed. Install what is missing, then run this again." >&2; exit 1 ;;
+  esac
 fi
 
 echo
 echo "== your details =="
-printf 'Full name for git commits: '   ; read -r git_name
-printf 'Email for git commits: '       ; read -r git_email
+ask 'Full name for git commits: ' git_name
+ask 'Email for git commits: '     git_email
 
 cat > "$HOME/.gitconfig.local" <<EOF
 [user]
