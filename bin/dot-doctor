@@ -19,6 +19,24 @@ warn() { printf '  \033[33mwarn\033[0m  %s\n' "$1"; }
 
 expand() { printf '%s' "${1/#\~/$HOME}"; }
 
+# The public mirror ships bin/ and the configs, but never docs/, publish/ or
+# private/. Checks that assert a PREFERENCE of this machine's owner rather
+# than whether something is broken are scoped to the source repo by it — an
+# adopter never agreed to those decisions, and failing their correct setup
+# over one is how a verification step loses its meaning.
+SOURCE_REPO=no
+[ -d "$REPO/docs" ] && SOURCE_REPO=yes
+
+# dot-pull reconciles a copy row back into the repo and is NOT in the mirror.
+# Naming it there sent an adopter after a tool they do not have, in the one
+# message they are most likely to ever see: every copy row exists precisely
+# because the application rewrites that file itself (found 14-09-2026).
+if [ -x "$REPO/bin/dot-pull" ]; then
+  RECONCILE="run dot-pull to reconcile"
+else
+  RECONCILE="the application rewrote it — copy it over the repo's copy to keep the change, or re-run dot-apply to discard it"
+fi
+
 echo "== manifest rows =="
 rows_seen=0
 while IFS=$'\t' read -r src tgt mode perms; do
@@ -55,7 +73,7 @@ while IFS=$'\t' read -r src tgt mode perms; do
       if [ ! -f "$abs_tgt" ]; then
         bad "$tgt missing"
       elif ! diff -q "$REPO/$src" "$abs_tgt" >/dev/null 2>&1; then
-        bad "$tgt differs from repo — run dot-pull to reconcile"
+        bad "$tgt differs from repo — $RECONCILE"
       else
         ok "$tgt"
       fi
@@ -106,8 +124,11 @@ fi
 
 # atuin is local-only by decision: no account, no sync. Logging in is what
 # creates this file, so its absence IS the enforcement — config keys cannot
-# express "never logged in".
-if [ ! -f "$HOME/.local/share/atuin/session" ]; then
+# express "never logged in". A decision, not a defect, so it is not asserted
+# against an adopter who may well want atuin sync.
+if [ "$SOURCE_REPO" = no ]; then
+  :
+elif [ ! -f "$HOME/.local/share/atuin/session" ]; then
   ok "atuin is local-only (no session file — never logged in)"
 else
   bad "atuin has a session file — an account is logged in, against the local-only decision"
@@ -130,7 +151,7 @@ if command -v eza >/dev/null 2>&1; then
     bad "eza emitted no colour at all — the ANSI-rider check has nothing to prove"
   elif printf '%s' "$eza_out" | grep -qE $'\x1b\[[0-9;]*(38|48);(5|2);'; then
     bad "eza emitted 256-colour/truecolor SGR codes — no longer riding the 16 ANSI colours (version bump? EZA_COLORS/LS_COLORS set?)"
-  elif [ -f "$HOME/.config/eza/theme.yml" ]; then
+  elif [ "$SOURCE_REPO" = yes ] && [ -f "$HOME/.config/eza/theme.yml" ]; then
     bad "~/.config/eza/theme.yml exists — a palette-carrying override against the rider rule"
   else
     ok "eza rides the 16 ANSI colours (4-bit output, no theme.yml)"
@@ -225,7 +246,7 @@ if git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
    && [ "$(git -C "$REPO" config --get core.fsmonitor 2>/dev/null)" = "true" ]; then
   git -C "$REPO" status --short >/dev/null 2>&1
   if git -C "$REPO" fsmonitor--daemon status >/dev/null 2>&1; then
-    ok "fsmonitor daemon is watching this repo (core.fsmonitor=true is live)"
+    ok "fsmonitor daemon is watching this repo (core.fsmonitor=true is live; the status above starts it if it was not)"
   else
     bad "core.fsmonitor=true but no daemon is watching this repo — status still walks the tree"
   fi
@@ -260,15 +281,22 @@ else
   warn "zshrc not found via manifest (~/.zshrc) — skipping z-sy-h ordering check"
 fi
 
-# D4 is conditional: the directory may have been deleted rather than wired.
-if [ -d "$HOME/.zsh/completions" ]; then
-  if script -q /dev/null zsh -l -i -c 'print -l $fpath' 2>/dev/null | tr -d '\r' | grep -q '.zsh/completions'; then
-    ok "~/.zsh/completions is in fpath"
+# This machine's decision: the directory was deleted rather than wired in.
+# Source-repo only, and for two reasons — the shipped zshrc adds only
+# ~/.docker/completions to fpath, so an adopter who HAS this directory could
+# never pass, and the passing branch printed a bare "D4" that appears nowhere
+# else in the mirror (both found 14-09-2026). It also spends a second
+# launching an interactive login zsh.
+if [ "$SOURCE_REPO" = yes ]; then
+  if [ -d "$HOME/.zsh/completions" ]; then
+    if script -q /dev/null zsh -l -i -c 'print -l $fpath' 2>/dev/null | tr -d '\r' | grep -q '.zsh/completions'; then
+      ok "~/.zsh/completions is in fpath"
+    else
+      bad "~/.zsh/completions exists but is not in fpath"
+    fi
   else
-    bad "~/.zsh/completions exists but is not in fpath"
+    ok "~/.zsh/completions absent (deleted rather than wired in)"
   fi
-else
-  ok "~/.zsh/completions absent (deleted per D4)"
 fi
 
 # Three states, not two. An unsuffixed dump is the defect; NO dump is a

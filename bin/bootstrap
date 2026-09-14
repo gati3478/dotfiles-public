@@ -18,12 +18,28 @@ fi
 # terminal. At end of input `read` returns non-zero and `set -e` stopped the
 # script with no word said — a pipe, or `</dev/null`, printed a prompt and
 # quit (14-09-2026).
-ask() { # ask <prompt> <variable> — the line typed, or a stated stop
+ask() { # ask <prompt> <variable> — the line typed, trimmed, or a stated stop
+  local _line
   printf '%s' "$1"
-  if ! IFS= read -r "$2"; then
+  if ! IFS= read -r _line; then
     printf '\nbootstrap: no answer on stdin — run it from a terminal, in a clone: ./bin/bootstrap\n' >&2
     exit 1
   fi
+  # Trimmed, because `  y  ` at a [y/N] prompt used to stop the run: the
+  # spaces were kept and the glob missed.
+  _line="${_line#"${_line%%[![:space:]]*}"}"
+  _line="${_line%"${_line##*[![:space:]]}"}"
+  eval "$2=\$_line"
+}
+ask_required() { # ask_required <prompt> <variable> — re-asks rather than accept a blank
+  while :; do
+    ask "$1" "$2"
+    eval "[ -n \"\$$2\" ]" && return
+    # A blank name or email wrote `name = ` into ~/.gitconfig.local and the
+    # run reported success; the failure surfaced later as git's "empty ident
+    # name (for <>) not allowed", at the adopter's first commit.
+    echo "  that cannot be empty — git refuses to commit without it" >&2
+  done
 }
 
 echo "== dependencies =="
@@ -31,20 +47,18 @@ missing=""
 for tool in kitty zsh starship fzf zoxide eza bat git; do
   command -v "$tool" >/dev/null 2>&1 || missing="$missing $tool"
 done
-# zsh-syntax-highlighting and zsh-autosuggestions are Homebrew formulae,
-# not commands on PATH — `command -v` can't see them, so they need their
-# own check. shell/zshrc guards both `source` lines, so a missing formula
-# degrades to a silent no-op rather than an error on every shell — but an
-# adopter who actually wants the plugins should still be told to install
-# them, same as every other dependency here.
+# These two are Homebrew formulae, not commands on PATH, so `command -v`
+# cannot see them. Test the exact files shell/zshrc sources — that is the
+# question being asked ("will the shell find it?"), and it answers correctly
+# on a machine whose Homebrew lives elsewhere, where the zshrc would not
+# find it either. `brew list` was asked until 14-09-2026: it reports an
+# installed formula as missing whenever it fails for an unrelated reason (a
+# read-only HOME, say), and it populates a ~35 MB API cache in the adopter's
+# ~/Library that nothing here announced.
 brew_missing=""
-if command -v brew >/dev/null 2>&1; then
-  for formula in zsh-syntax-highlighting zsh-autosuggestions; do
-    brew list --formula "$formula" >/dev/null 2>&1 || brew_missing="$brew_missing $formula"
-  done
-else
-  brew_missing=" zsh-syntax-highlighting zsh-autosuggestions"
-fi
+for plugin in zsh-syntax-highlighting zsh-autosuggestions; do
+  [ -f "/opt/homebrew/share/$plugin/$plugin.zsh" ] || brew_missing="$brew_missing $plugin"
+done
 if [ -n "$missing$brew_missing" ]; then
   echo "Missing:$missing$brew_missing"
   echo "On macOS:  brew install${missing}${brew_missing}"
@@ -53,22 +67,36 @@ if [ -n "$missing$brew_missing" ]; then
   # `y` alone was the only accepted answer, and anything else left without a
   # word: a capital Y installed nothing and said nothing (14-09-2026).
   case "$reply" in
-    [yY]*) ;;
+    [yY]|[yY][eE][sS]) ;;
     *) echo "bootstrap: stopped — nothing was changed. Install what is missing, then run this again." >&2; exit 1 ;;
   esac
 fi
 
 echo
 echo "== your details =="
-ask 'Full name for git commits: ' git_name
-ask 'Email for git commits: '     git_email
+ask_required 'Full name for git commits: ' git_name
+ask_required 'Email for git commits: '     git_email
 
-cat > "$HOME/.gitconfig.local" <<EOF
-[user]
-	name = $git_name
-	email = $git_email
-EOF
-echo "wrote ~/.gitconfig.local"
+# ~/.gitconfig.local is not a manifest row, so neither of dot-apply's backup
+# rules covers it — and it is a conventional name across dotfiles setups,
+# which made an unconditional `cat >` the likeliest way for this repo to
+# destroy something of an adopter's (a signing key, a work identity). Backed
+# up like a manifest row now, and only when it would actually change.
+GITCONFIG_LOCAL="$HOME/.gitconfig.local"
+new_identity="$(printf '[user]\n\tname = %s\n\temail = %s\n' "$git_name" "$git_email")"
+if [ -e "$GITCONFIG_LOCAL" ] && [ "$(cat "$GITCONFIG_LOCAL")" = "$new_identity" ]; then
+  echo "unchanged ~/.gitconfig.local"
+else
+  if [ -e "$GITCONFIG_LOCAL" ] || [ -L "$GITCONFIG_LOCAL" ]; then
+    backup="$GITCONFIG_LOCAL.pre-dotfiles.$(date +%Y%m%d-%H%M%S)"
+    n=1
+    while [ -e "$backup" ] || [ -L "$backup" ]; do backup="$GITCONFIG_LOCAL.pre-dotfiles.$(date +%Y%m%d-%H%M%S).$n"; n=$((n + 1)); done
+    mv "$GITCONFIG_LOCAL" "$backup"
+    echo "backed up ~/.gitconfig.local -> $(basename "$backup")"
+  fi
+  printf '%s\n' "$new_identity" > "$GITCONFIG_LOCAL"
+  echo "wrote ~/.gitconfig.local"
+fi
 
 # The shell overlays are optional: the guards in zshenv/zprofile make an
 # absent file a no-op, so an adopter with no work split needs neither.
@@ -76,31 +104,65 @@ touch "$HOME/.zshenv.local" "$HOME/.zprofile.local"
 echo "wrote empty ~/.zshenv.local and ~/.zprofile.local (fill in if needed)"
 
 echo
-echo "== tab-title path =="
-# terminal/kitty/kitty.conf's tab_title_template abbreviates the working
-# directory to '~' via a Python .replace() call inside kitty's own config
-# language. kitty.conf is not shell — that expression has no access to
-# $HOME or any other env var, only the template's own data fields — so the
-# home directory to collapse has to be a literal, authored for the original
-# machine (/Users/gati3478). Rewrite it here instead, once, for this one.
-#
-# Idempotent: after the first run the literal is gone, so a re-run's grep
-# finds nothing and this is a no-op. Uses a temp file + mv rather than
-# sed -i, which takes an extra argument on macOS (BSD sed) and none on
-# Linux (GNU sed) — portable either way.
-KITTY_CONF="$REPO/terminal/kitty/kitty.conf"
-ORIGINAL_HOME="/Users/gati3478"
-if [ -f "$KITTY_CONF" ] && grep -q "$ORIGINAL_HOME" "$KITTY_CONF"; then
-  tmp="$(mktemp)"
-  sed "s|$ORIGINAL_HOME|$HOME|g" "$KITTY_CONF" > "$tmp" && mv "$tmp" "$KITTY_CONF"
-  echo "patched tab_title_template in terminal/kitty/kitty.conf for \$HOME=$HOME"
-else
-  echo "tab_title_template already patched (or kitty.conf not found) — skipped"
-fi
-
-echo
 echo "== deploying =="
 "$REPO/bin/dot-apply"
+
+echo
+echo "== tab-title path =="
+# kitty.conf's tab_title_template collapses the working directory to '~' with
+# a Python .replace() inside kitty's own config language, which expands no
+# environment variable in this setting — kitty 0.48.2's docs list expansion
+# per option (include, shell, editor, listen_on, startup_session, env) and
+# this is not one of them. So the home to collapse must be a literal,
+# authored for one machine.
+#
+# It is NOT rewritten in the clone. Doing that left the clone permanently
+# dirty, and the deployed gitconfig sets pull.rebase, so `git pull` then
+# refused every upstream change with "cannot pull with rebase: You have
+# unstaged changes" — found 14-09-2026. kitty.conf ends with
+# `globinclude local.conf`, which is silent when the file does not exist and
+# last-wins when it does, so the adopter's line goes to ~/.config instead.
+AUTHORED_HOME="/Users/gati3478"
+KITTY_CONF="$REPO/terminal/kitty/kitty.conf"
+LOCAL_CONF="$HOME/.config/kitty/local.conf"
+if [ "$HOME" = "$AUTHORED_HOME" ]; then
+  echo "this is the machine the tab title was authored for — nothing to write"
+elif [ ! -f "$KITTY_CONF" ]; then
+  echo "kitty.conf not found — skipped"
+else
+  # The line is read out of kitty.conf rather than repeated here: two copies
+  # of a taste value is the drift this repo exists to close. awk's index and
+  # substr match no pattern at all — `sed "s|$AUTHORED_HOME|$HOME|"` built its
+  # expression out of $HOME, so a `|` in it became a different command and an
+  # `&` became the whole match, silently.
+  title_line="$(awk -v old="$AUTHORED_HOME" -v new="$HOME" '
+    /^tab_title_template / {
+      out = ""; rest = $0
+      while ((i = index(rest, old)) > 0) {
+        out = out substr(rest, 1, i - 1) new
+        rest = substr(rest, i + length(old))
+      }
+      print out rest
+      exit
+    }' "$KITTY_CONF")"
+  if [ -z "$title_line" ]; then
+    echo "kitty.conf has no tab_title_template line — nothing to write" >&2
+  else
+    mkdir -p "$(dirname "$LOCAL_CONF")"
+    {
+      echo "# Written by bootstrap. kitty.conf globincludes this file last, so"
+      echo "# the line below overrides the one authored for another machine."
+      printf '%s\n' "$title_line"
+    } > "$LOCAL_CONF"
+    # Report what is true, not what was attempted: the sed this replaced
+    # printed "patched …" and exited 0 having changed nothing at all.
+    if grep -qF "$HOME" "$LOCAL_CONF"; then
+      echo "wrote ~/.config/kitty/local.conf — tab titles collapse this HOME to '~'"
+    else
+      echo "bootstrap: could not write the tab title for this HOME; tabs will show full paths" >&2
+    fi
+  fi
+fi
 
 echo
 echo "Done. Open a new terminal window."

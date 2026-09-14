@@ -30,8 +30,25 @@ short() {
   esac
 }
 
+# Counted before the loop so the exit trap can report progress against it.
+expected_rows=$(awk -F'\t' '$1 !~ /^($|#)/ { c++ } END { print c+0 }' "$MANIFEST")
+
+# set -e stops this script the moment an ln or cp fails — on a read-only
+# directory, say — and until 14-09-2026 it stopped in silence, after some
+# rows had been deployed and the rest had not. Nothing here is destructive
+# and every row is idempotent, so the useful thing to say is how far it got
+# and that running it again finishes the job.
 applied=0
 rows_seen=0
+on_exit() {
+  local rc=$?
+  if [ "$rc" -ne 0 ] && [ "$applied" -gt 0 ]; then
+    echo "--" >&2
+    echo "dot-apply: stopped after $applied of $expected_rows entries. Fix what is reported above and run it again — every row is idempotent, so a re-run continues rather than repeating." >&2
+  fi
+  return "$rc"
+}
+trap on_exit EXIT
 while IFS=$'\t' read -r src tgt mode perms; do
   case "$src" in ''|'#'*) continue ;; esac
   rows_seen=$((rows_seen + 1))
@@ -74,6 +91,12 @@ while IFS=$'\t' read -r src tgt mode perms; do
       if [ -f "$abs_tgt" ] && [ ! -L "$abs_tgt" ]; then
         cp "$abs_tgt" "$abs_tgt.pre-dotfiles"
         echo "backed up       $tgt -> $tgt.pre-dotfiles"
+      elif [ -L "$abs_tgt" ] && [ "$(readlink "$abs_tgt")" != "$abs_src" ]; then
+        # An adopter coming from stow, chezmoi or yadm has SYMLINKS here, not
+        # plain files, and this branch replaced them without a word — the file
+        # they pointed at survived, but nothing recorded where that was.
+        # Saying it is the whole fix: there is nothing to copy, only to name.
+        echo "replaced link   $tgt (was -> $(readlink "$abs_tgt"))"
       fi
       ln -sfn "$abs_src" "$abs_tgt"
       ;;
@@ -99,7 +122,6 @@ done < "$MANIFEST"
 # unlike dot-doctor (verifies) and dot-pull (reconciles copy-mode files),
 # a silent short-deploy here means a stale symlink or missing file stays
 # live with no error and an "N entries applied" count that looks correct.
-expected_rows=$(awk -F'\t' '$1 !~ /^($|#)/ { c++ } END { print c+0 }' "$MANIFEST")
 if [ "$rows_seen" -ne "$expected_rows" ]; then
   echo "dot-apply: refusing — processed $rows_seen manifest row(s) but $MANIFEST has $expected_rows — a row was silently skipped (missing trailing newline?)" >&2
   exit 1
