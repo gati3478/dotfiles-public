@@ -18,7 +18,8 @@ installs points back here.
 Rendered at 104 columns, where the metrics line has no slack left; a wider
 terminal opens the gap before the usage windows. The icons are the blank
 cells a terminal without a Nerd Font shows — the modules under
-[Glyphs](#glyphs) each carry one.
+[Glyphs](#glyphs) each carry one, and line 1's two are starship's own, for
+the branch and for Node.
 
 ## What you need
 
