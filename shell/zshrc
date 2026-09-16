@@ -136,10 +136,9 @@ unalias run-help 2>/dev/null
 autoload -Uz run-help run-help-git run-help-sudo run-help-openssl
 
 # ── Runtimes: node + python (mise) ───────────────────────
-# One binary, one config, per-directory versions; replaced pyenv and nvm
-# (both still installed, uninitialised). SDKMAN and jset stay: mise would
-# fight the Homebrew temurin casks, and jset guards against java_home's
-# silent fallback.
+# One binary, one config, per-directory versions; replaced pyenv and nvm.
+# SDKMAN and jset stay: mise would fight the Homebrew temurin casks, and
+# jset guards against java_home's silent fallback.
 eval "$(mise activate zsh)"
 # Its precmd hook spawns `mise hook-env` on most prompts (the cost is in
 # preferences.md § Shell) and its chpwd_only knob is inert, so the hook is

@@ -5,7 +5,18 @@
 # stack, and hid backgrounded jobs. git_commit joined 09-09-2026 — on a
 # detached HEAD git_branch renders the word "HEAD" and never says which
 # commit; only_detached is its default, so it is silent on a branch.
-format = "$username$directory$git_branch$git_commit$git_state$git_status$python$java$kotlin$gradle$rust$nodejs$jobs$cmd_duration$character"
+#
+# Two lines since 16-09-2026: context above, a bare ❯ below, so the width
+# left for typing never depends on the directory or the branch. $fill pushes
+# the toolchain to the right margin — where you are on the left, what you run
+# with on the right. The context line does the blank line's separating job,
+# so add_newline is off and the prompt costs the two rows it always did.
+# preferences.md § Interaction has the measurement and what was declined.
+add_newline = false
+format = "$username$directory$git_branch$git_commit$git_state$git_status$fill$python$java$kotlin$gradle$rust$nodejs$jobs$cmd_duration$line_break$character"
+
+[fill]
+symbol = " "
 
 [cmd_duration]
 min_time = 2000
@@ -32,25 +43,41 @@ truncation_length = 3
 success_symbol = "[❯](bold #b8bb26)"
 error_symbol = "[❯](bold #fb4934)"
 
+# Icons are the separators — no "on", no "via". A version shows the digits a
+# decision turns on: the major for the JDK and Node, major.minor for the rest.
+# cship's statusline line 1 renders these same module formats.
 [git_branch]
-format = "on [$symbol$branch]($style) "
+format = "[$symbol$branch]($style) "
 style = "bold #8ec07c"
 
 [git_status]
 style = "#fabd2f"
 
 [python]
-format = "via [$symbol($version)]($style) "
+format = "[$symbol($version)]($style) "
+version_format = "${major}.${minor}"
 style = "#83a598"
 
 [java]
-format = "via [$symbol($version)]($style) "
+format = "[$symbol($version)]($style) "
+version_format = "${major}"
 style = "#fb4934"
 
+# Badge only. starship reads the version from `kotlinc`; this machine's Kotlin
+# is Gradle's embedded compiler — a recorded ceiling.
+[kotlin]
+format = "[$symbol]($style)"
+
+[gradle]
+format = "[$symbol($version)]($style) "
+version_format = "${major}.${minor}"
+
 [rust]
-format = "via [$symbol($version)]($style) "
+format = "[$symbol($version)]($style) "
+version_format = "${major}.${minor}"
 style = "#fe8019"
 
 [nodejs]
-format = "via [$symbol($version)]($style) "
+format = "[$symbol($version)]($style) "
+version_format = "${major}"
 style = "#b8bb26"

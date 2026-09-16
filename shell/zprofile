@@ -23,7 +23,6 @@ unset _jh
 # ── Installer-added paths ─────────────────────────────────
 path=(
   "$HOME/Library/Application Support/JetBrains/Toolbox/scripts"
-  "$HOME/.local/share/sonarqube-cli/bin"
   "$HOME/.sdkman/candidates/springboot/current/bin"
   $path
 )
