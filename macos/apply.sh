@@ -11,9 +11,14 @@ set -euo pipefail
 
 d() { defaults write "$@"; }
 
-# Appearance. osascript flips dark mode live; the defaults key alone waits
-# for a re-login. Automatic switching is asserted ABSENT, so it is deleted.
-osascript -e 'tell application "System Events" to tell appearance preferences to set dark mode to true' >/dev/null
+# Appearance. The key is what survives; osascript only saves the re-login, and
+# it is a TCC Automation request, so it can fail — a grant denied or not yet
+# asked for, a session with no GUI — and under `set -e` that would abort the
+# script before a single setting was written. Best effort, printed remedy.
+# The switching row wants the key not to say 1, and deleting it satisfies that.
+d -g AppleInterfaceStyle -string Dark
+osascript -e 'tell application "System Events" to tell appearance preferences to set dark mode to true' >/dev/null 2>&1 \
+  || echo "could not flip dark mode live — grant Automation to the terminal, or re-login for Dark to apply" >&2
 defaults delete -g AppleInterfaceStyleSwitchesAutomatically 2>/dev/null || true
 
 # Dock
@@ -50,8 +55,9 @@ d -g com.apple.trackpad.scaling -float 1.5
 d -g NSAutomaticSpellingCorrectionEnabled -bool false
 
 # Language and region. The Georgian-QWERTY layout itself is added in
-# System Settings → Keyboard → Input Sources: its array is not safely written
-# from here, and the doctor asserts it is present.
+# System Settings → Keyboard → Input Sources — deliberately not written from
+# here, untested either way; the rehearsal is where to try it. The doctor
+# asserts it is present.
 d -g AppleLanguages -array en-US ka-GE
 d -g AppleLocale -string 'en_US@rg=gezzzz'
 
