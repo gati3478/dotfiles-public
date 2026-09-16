@@ -1,4 +1,4 @@
-# dotfiles · public
+# preen
 
 A macOS terminal and editor setup: kitty, zsh, tmux, starship, the cship Claude
 Code statusline, Zed and Sublime Text. Generated from a private dotfiles repo,
@@ -13,12 +13,10 @@ makes the tool read them; its page says exactly what it touches. Today that
 is [`prompt/`](prompt/README.md), the Claude Code statusline. Everything else
 installs as one setup, through `bin/bootstrap` under Install below.
 
-> This repo was called **`osaka-jade`** until 15-08-2026, after the kitty
-> palette it shipped at the time. The name pinned a theme choice that is
-> explicitly allowed to change, and asserted a unification the setup rejects —
-> the editors run a different scheme on purpose. GitHub redirects the old URL.
-> The anticipated change has since happened: the terminal palette moved on
-> 25-08-2026, and the repo name did not have to move with it.
+> This repo was **`osaka-jade`** until 15-08-2026 — a name that pinned a
+> palette allowed to change, and it changed — and **`dotfiles-public`** until
+> 17-09-2026. *Preen*: to groom to your own standard, which is what the
+> tooling does. GitHub redirects both old URLs.
 
 ## The model
 
@@ -86,8 +84,8 @@ machinery described above.
 ## Install
 
 ```bash
-git clone https://github.com/gati3478/dotfiles-public ~/dotfiles-public
-cd ~/dotfiles-public && ./bin/bootstrap
+git clone https://github.com/gati3478/preen ~/preen
+cd ~/preen && ./bin/bootstrap
 ```
 
 `bootstrap` asks for your name and email and writes them to

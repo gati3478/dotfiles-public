@@ -52,7 +52,7 @@ the branch and for Node.
 One line, no clone:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/dotfiles-public/main/prompt/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash
 ```
 
 Or from a clone of this repository, `./prompt/install.sh`. The script does
@@ -87,7 +87,7 @@ answers one; with both answered nothing is asked, and with no terminal the
 defaults are taken — `starship.toml` left alone, the account module hidden:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gati3478/dotfiles-public/main/prompt/install.sh | bash -s -- --with-starship --account-label personal
+curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash -s -- --with-starship --account-label personal
 ./prompt/install.sh --no-starship --no-account
 ```
 

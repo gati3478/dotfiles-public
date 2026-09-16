@@ -8,7 +8,7 @@ alone. Copies, never symlinks: the files become yours to tune, and nothing
 here points back at this repo afterwards.
 
   from a clone:    ./prompt/install.sh [flags]
-  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/dotfiles-public/main/prompt/install.sh | bash -s -- [flags]
+  from the mirror: curl -fsSL https://raw.githubusercontent.com/gati3478/preen/main/prompt/install.sh | bash -s -- [flags]
 
 It asks two questions when it has a terminal to ask on. Each flag answers
 one; with both answered it asks nothing, and with no terminal it takes the
@@ -26,7 +26,7 @@ EOF
 }
 set -euo pipefail
 
-SOURCE_URL="${PROMPT_SOURCE:-https://raw.githubusercontent.com/gati3478/dotfiles-public/main/prompt}"
+SOURCE_URL="${PROMPT_SOURCE:-https://raw.githubusercontent.com/gati3478/preen/main/prompt}"
 CSHIP_FLOOR="1.8.2"   # per-window usage tokens and CSHIP_ACCOUNT arrived here
 REFRESH_SECONDS=60    # re-render on a timer, so the clock and windows move while idle
 CONFIG_DIR="$HOME/.config"
