@@ -28,3 +28,4 @@ editor/sublime/Terminus View.sublime-settings	~/Library/Application Support/Subl
 editor/sublime/Terminus.hidden-color-scheme	~/Library/Application Support/Sublime Text/Packages/User/Terminus/Terminus.hidden-color-scheme	copy
 terminal/kitty/open-actions.conf	~/.config/kitty/open-actions.conf	link
 terminal/kitty/mime.types	~/.config/kitty/mime.types	link
+mise/config.toml	~/.config/mise/config.toml	link
