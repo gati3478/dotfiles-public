@@ -9,7 +9,7 @@ installs points back here.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ calliope on   main [!?⇡] via   v24.16.0                                                              │
+│ calliope   main [!?⇡]   24                                                                           │
 │   personal   Fable 5   high ↳ code                                                            30m50s │
 │ █████░░░░░░░ 43%  43%(393k/1000k)    $3.42  +470 -122  5h 34% → Fri 4:00 AM     7d 72% → Tue 1:00 AM │
 └──────────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -43,7 +43,8 @@ cells a terminal without a Nerd Font shows — the modules under
   With it present, line 1 renders under **your** starship config, whatever
   that is. `starship.toml` here is the one the picture was drawn with, and
   taking it replaces your shell prompt, because starship reads one file for
-  both.
+  both. It is a two-line prompt: context above, a bare `❯` below, the
+  toolchain at the right margin.
 
 ## Install
 
@@ -256,11 +257,11 @@ Haiku `#b8bb26`. The table is the whole theme; `background`, `bg1` and
 
 ## About the file itself
 
-`cship.toml` is the author's live configuration, published verbatim. Its
-comments cite files of the private source repository — `preferences.toml`,
-`docs/blocked-upstream.md` — that hold the reasoning behind a few values.
-This page carries what an adopter needs; those comments are context, not
-instructions.
+`cship.toml` and `starship.toml` are the author's live configuration,
+published verbatim. Their comments cite files of the private source
+repository — `preferences.toml`, `preferences.md`, `docs/blocked-upstream.md`
+— that hold the reasoning behind a few values. This page carries what an
+adopter needs; those comments are context, not instructions.
 
 ## License
 

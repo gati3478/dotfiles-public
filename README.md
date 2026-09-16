@@ -55,8 +55,8 @@ repo's own, published unedited, so their comments cite its pages
 Nothing in this repository reads any of them and nothing breaks without them —
 they are context for the author, not instructions for you. Where one appeared
 in a message meant for *you* to act on, that message has been rewritten.
-`prompt/README.md` says the same about `cship.toml` for anyone taking that
-directory alone.
+`prompt/README.md` says the same about `cship.toml` and `starship.toml` for
+anyone taking that directory alone.
 
 ## What you get
 

@@ -44,8 +44,8 @@ success_symbol = "[❯](bold #b8bb26)"
 error_symbol = "[❯](bold #fb4934)"
 
 # Icons are the separators — no "on", no "via". A version shows the digits a
-# decision turns on: the major for the JDK and Node, major.minor for the rest.
-# cship's statusline line 1 renders these same module formats.
+# decision turns on: the major for the JDK and Node, major.minor for Gradle,
+# Python and Rust. cship's statusline line 1 renders these same formats.
 [git_branch]
 format = "[$symbol$branch]($style) "
 style = "bold #8ec07c"
