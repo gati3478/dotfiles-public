@@ -58,19 +58,24 @@ done
 # ~/Library that nothing here announced.
 brew_missing=""
 for plugin in zsh-syntax-highlighting zsh-autosuggestions; do
-  [ -f "/opt/homebrew/share/$plugin/$plugin.zsh" ] || brew_missing="$brew_missing $plugin"
+  [ -f "/opt/homebrew/share/$plugin/$plugin.zsh" ] && continue
+  # shell/zshrc also takes the highlighter from a clone, for a host without root.
+  [ "$plugin" = zsh-syntax-highlighting ] && [ -f "$HOME/.zsh/$plugin/$plugin.zsh" ] && continue
+  brew_missing="$brew_missing $plugin"
 done
 if [ -n "$missing$brew_missing" ]; then
   echo "Missing:$missing$brew_missing"
   echo "On macOS:  brew install${missing}${brew_missing}"
   echo "The font is separate:  brew install --cask font-fira-code-nerd-font"
   if [ -n "$brew_missing" ]; then
-    # Say this or the remedy loops: shell/zshrc sources the two plugins from
-    # /opt/homebrew/share by absolute path, so a Homebrew anywhere else
-    # installs them somewhere the shell will not look, and this reports them
-    # missing again after a successful install.
-    echo "Note: shell/zshrc sources those two from /opt/homebrew/share by absolute path."
-    echo "      On a Homebrew with another prefix, edit those two lines to match it."
+    # Say this or the remedy loops: shell/zshrc looks for the two plugins
+    # under /opt/homebrew/share by absolute path (the highlighter also under
+    # ~/.zsh), so a Homebrew anywhere else installs them somewhere the shell
+    # will not look, and this reports them missing again after a successful
+    # install.
+    echo "Note: shell/zshrc looks for those two under /opt/homebrew/share by absolute path"
+    echo "      (the highlighter also as a clone at ~/.zsh/zsh-syntax-highlighting)."
+    echo "      On a Homebrew with another prefix, edit those lines to match it."
   fi
   ask 'Continue anyway? [y/N] ' reply
   # `y` alone was the only accepted answer, and anything else left without a

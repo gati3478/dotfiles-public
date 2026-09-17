@@ -1,4 +1,5 @@
-# Example patterns. The real config is private — it names live hosts.
+# Example patterns for ~/.ssh/config.local, which `config` beside this file
+# includes first. The real one is private — it names live hosts.
 
 # A remote you hit with many short `ssh host '<cmd>'` calls.
 # ControlMaster reuses one TCP+auth handshake, which is the difference
@@ -48,15 +49,3 @@ Host example-lan-host
   ControlPersist 10m
   ServerAliveInterval 15
   ServerAliveCountMax 3
-
-# Every key-based host signs through a password manager's SSH agent (here
-# Proton Pass). Each IdentityFile above is the .pub: with IdentitiesOnly that
-# selects exactly one agent key per host, which matters once several keys
-# share one agent — GitHub, for one, identifies the account by the first
-# key it accepts. IdentityAgent here rather than SSH_AUTH_SOCK in a shell
-# file, because Dock-launched apps never read .zshrc and every ssh binary
-# reads this. A key the agent does not hold fails loud ("Permissions 0644 …
-# too open … Permission denied"): ssh tries the .pub as a private key and
-# never opens a private file beside it.
-Host *
-  IdentityAgent ~/.ssh/proton-pass-ssh-agent.sock

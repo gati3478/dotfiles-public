@@ -59,10 +59,10 @@ export PATH="$PATH:$HOME/.docker/bin"
 
 # The Antigravity installer's line, kept as its marker so an update does
 # not re-append it. Not redundant: under `typeset -U` a re-assignment keeps
-# the FIRST occurrence, so this moves ~/.local/bin ahead of the
-# claude-switch shim and the next line puts the shim back.
+# the FIRST occurrence, so this moves ~/.local/bin to the front, ahead of
+# anything fronted earlier; a host overlay that cares re-fronts after it —
+# .zprofile.local runs next.
 export PATH="$HOME/.local/bin:$PATH"
-path=("$HOME/.local/share/claude-switch/bin" $path)
 
 # Machine-specific secrets and paths.
 [ -f "$HOME/.zprofile.local" ] && source "$HOME/.zprofile.local"

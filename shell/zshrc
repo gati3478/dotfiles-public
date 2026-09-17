@@ -2,8 +2,15 @@
 # .zprofile.
 
 # ── tmux (SSH only — Kitty is primary locally) ───────────
+# Not `exec tmux`: when tmux cannot start — a TERM the host's terminfo does
+# not know, and it exits "open terminal failed" — exec would end the login
+# with no shell at all. This form falls through to a plain shell and says
+# so. `-A` attaches to the session if it exists, so a drop reconnects.
 if command -v tmux &>/dev/null && [[ -z "$TMUX" && $- == *i* && -n "$SSH_CONNECTION" ]]; then
-  exec tmux new-session -A -s remote
+  if tmux new-session -A -s remote; then
+    exit
+  fi
+  print -u2 "tmux would not start; continuing in a plain shell."
 fi
 
 # ── Shell Options ────────────────────────────────────────
@@ -120,11 +127,12 @@ zstyle ':completion:*' rehash true                 # a freshly installed command
 
 # ── ssh/scp completion: offer hosts, not macOS service accounts ──────────
 # Two completers contribute candidates: the user database (mostly macOS
-# daemon accounts — excluded) and hosts, taken from ~/.ssh/config rather
-# than known_hosts, whose entries are hashed and include every host visited
-# once. The numbers are in preferences.md § Interaction.
+# daemon accounts — excluded) and hosts, taken from ~/.ssh/config and the
+# config.local it includes rather than known_hosts, whose entries are hashed
+# and include every host visited once. The numbers are in preferences.md
+# § Interaction. Through cat: awk stops at the first file it cannot open.
 zstyle ':completion:*:*:*:users' ignored-patterns '_*' daemon nobody root
-_ssh_config_hosts=(${(f)"$(awk '/^[[:space:]]*[Hh]ost[[:space:]]/{for(i=2;i<=NF;i++) if ($i !~ /[*?!]/) print $i}' ~/.ssh/config 2>/dev/null)"})
+_ssh_config_hosts=(${(f)"$(cat ~/.ssh/config ~/.ssh/config.local 2>/dev/null | awk '/^[[:space:]]*[Hh]ost[[:space:]]/{for(i=2;i<=NF;i++) if ($i !~ /[*?!]/) print $i}')"})
 zstyle ':completion:*:(ssh|scp|sftp|rsync|mosh|ssh-copy-id):*' hosts $_ssh_config_hosts
 
 # ── Help ─────────────────────────────────────────────────
@@ -139,12 +147,14 @@ autoload -Uz run-help run-help-git run-help-sudo run-help-openssl
 # One binary, one config, per-directory versions; replaced pyenv and nvm.
 # SDKMAN and jset stay: mise would fight the Homebrew temurin casks, and
 # jset guards against java_home's silent fallback.
-eval "$(mise activate zsh)"
-# Its precmd hook spawns `mise hook-env` on most prompts (the cost is in
-# preferences.md § Shell) and its chpwd_only knob is inert, so the hook is
-# cut by hand. The chpwd hook stays: a directory's tool set still switches
-# on cd, and a config edited in place applies on the next one (`cd .`).
-add-zsh-hook -d precmd _mise_hook_precmd
+if (( $+commands[mise] )); then
+  eval "$(mise activate zsh)"
+  # Its precmd hook spawns `mise hook-env` on most prompts (the cost is in
+  # preferences.md § Shell) and its chpwd_only knob is inert, so the hook is
+  # cut by hand. The chpwd hook stays: a directory's tool set still switches
+  # on cd, and a config edited in place applies on the next one (`cd .`).
+  add-zsh-hook -d precmd _mise_hook_precmd
+fi
 
 # ── Java ─────────────────────────────────────────────────
 # The default JDK is set per login in .zprofile; `jset N` switches at runtime.
@@ -217,15 +227,19 @@ fi
 # place for its default Atuin-AI `?` binding. The update check stays on —
 # its notice is this surface's version-bump signal. The init also sets
 # ZSH_AUTOSUGGEST_STRATEGY=(atuin), so the ghost text and Ctrl+R answer
-# from one store; dot-doctor pins it. Guarded like fzf.
-if [[ -t 1 ]]; then
+# from one store; dot-doctor pins it. Guarded on the TTY like fzf, and on
+# the binary — a host without atuin keeps fzf's Ctrl+R.
+if [[ -t 1 ]] && (( $+commands[atuin] )); then
   eval "$(atuin init zsh --disable-up-arrow --disable-ai)"
 fi
 
 # ── Pagers ───────────────────────────────────────────────
 # man renders through bat, which carries --theme=ansi from its config, so
-# manual pages inherit the terminal palette.
-export MANPAGER="sh -c 'col -bx | bat --language=man --plain'"
+# manual pages inherit the terminal palette. Guarded: without bat this
+# pager is a broken pipe, and man's own default still works.
+if (( $+commands[bat] )); then
+  export MANPAGER="sh -c 'col -bx | bat --language=man --plain'"
+fi
 # One lever for every pager — bat's less, delta's, a bare pipe: -i folds
 # case until the pattern carries a capital, -R passes ANSI through on manual
 # pipes, -F prints and exits when output fits one screen, --incsearch moves
@@ -241,7 +255,9 @@ export LESS='-iRF --incsearch --wordwrap -Q --no-vbell'
 export READNULLCMD=less
 
 # ── Directories and listings ─────────────────────────────
-eval "$(zoxide init zsh)"          # z <partial-path> jumps by frecency
+if (( $+commands[zoxide] )); then
+  eval "$(zoxide init zsh)"        # z <partial-path> jumps by frecency
+fi
 # Every entry kitty-clickable — =auto is load-bearing, a bare --hyperlink
 # eats the next positional — and directories first, as in the completion menu.
 alias ls="eza --icons=auto --hyperlink=auto --group-directories-first"
@@ -261,11 +277,10 @@ ZSH_AUTOSUGGEST_MANUAL_REBIND=1
   source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
 
 # ── Starship Prompt ──────────────────────────────────────
-eval "$(starship init zsh)"
-
-# Re-front the Claude account shim: `mise activate` prepends its own shim
-# directory, which can land ahead of it. See .zshenv.
-path=("$HOME/.local/share/claude-switch/bin" $path)
+# A host without it keeps whatever prompt its overlay sets.
+if (( $+commands[starship] )); then
+  eval "$(starship init zsh)"
+fi
 
 # Machine-specific overrides; absent on a fresh clone.
 [ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"
@@ -279,5 +294,12 @@ path=("$HOME/.local/share/claude-switch/bin" $path)
 ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets pattern)
 typeset -A ZSH_HIGHLIGHT_PATTERNS
 ZSH_HIGHLIGHT_PATTERNS+=('rm -rf *' 'fg=white,bold,bg=red')
-[ -f /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ] && \
-  source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+# Two candidates, first hit wins: the formula, then a clone — the form a
+# host without root has to use. A host with neither keeps its login shell.
+for _zsh_hl_dir in /opt/homebrew/share/zsh-syntax-highlighting ~/.zsh/zsh-syntax-highlighting; do
+  if [ -f "$_zsh_hl_dir/zsh-syntax-highlighting.zsh" ]; then
+    source "$_zsh_hl_dir/zsh-syntax-highlighting.zsh"
+    break
+  fi
+done
+unset _zsh_hl_dir

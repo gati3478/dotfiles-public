@@ -19,11 +19,11 @@ warn() { printf '  \033[33mwarn\033[0m  %s\n' "$1"; }
 
 expand() { printf '%s' "${1/#\~/$HOME}"; }
 
-# The public mirror ships bin/ and the configs, but never docs/, publish/ or
-# private/. Checks that assert a PREFERENCE of this machine's owner rather
-# than whether something is broken are scoped to the source repo by it — an
-# adopter never agreed to those decisions, and failing their correct setup
-# over one is how a verification step loses its meaning.
+# The public mirror ships bin/ and the configs, but never docs/, publish/,
+# hosts/ or private/. Checks that assert a PREFERENCE of this machine's owner
+# rather than whether something is broken are scoped to the source repo by
+# it — an adopter never agreed to those decisions, and failing their correct
+# setup over one is how a verification step loses its meaning.
 SOURCE_REPO=no
 [ -d "$REPO/docs" ] && SOURCE_REPO=yes
 
@@ -85,7 +85,7 @@ while IFS=$'\t' read -r src tgt mode perms; do
 
   # The `perms` column is APPLIED by dot-apply (`chmod "$perms"`) and, until
   # 14-08-2026, was verified by nothing here — this loop read $perms and never
-  # used it. So private/ssh/config could drift from 0600 to 0644 and every row
+  # used it. So a host's ssh config could drift from 0600 to 0644 and every row
   # still reported ok: the column looked like a guarantee and was only ever an
   # instruction. -L on purpose, because chmod follows symlinks, so the mode that
   # matters for a link row is the resolved file's.
@@ -424,10 +424,10 @@ fi
 # generic on purpose: a check written inline would ship in the mirror and
 # describe infrastructure that no deny.txt entry could catch, because none of
 # it is a secret string — it is the shape of a private setup. The mirror
-# carries no private/, so this loop finds nothing there and names nothing.
+# carries no hosts/, so this loop finds nothing there and names nothing.
 # Each module prints its own heading for the same reason run_pref_checks does:
 # a heading printed here would leave a bare section with nothing under it.
-for _mod in "$REPO"/private/doctor.d/*.sh; do
+for _mod in "$REPO"/hosts/*/doctor.d/*.sh; do
   [ -f "$_mod" ] && source "$_mod"
 done
 unset _mod

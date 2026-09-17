@@ -7,39 +7,6 @@ typeset -U path PATH             # every later prepend is idempotent
 path=("$HOME/.local/bin" $path)
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
-# ── Claude Code: per-directory account selection (concurrency-safe) ─────────
-# The shim at ~/.local/share/claude-switch/bin/claude picks the WORK account
-# under CC_WORK_PREFIX and PERSONAL elsewhere, for every launch that resolves
-# `claude` via PATH; it mirrors manage-once assets into ~/.claude-work and
-# unions user-scope MCP servers both ways (launching side wins, minus
-# CC_MCP_EXCLUDE). Login, connectors and per-project grants stay per
-# account, so both run concurrently. The shim has the logic; the vault's
-# dual-account note has the reasoning. Not reached by GUI or cron launches —
-# set CC_ACCOUNT=work in their environment. (.zprofile re-fronts this
-# directory after an installer line; .zshrc after `mise activate`.)
-path=("$HOME/.local/share/claude-switch/bin" $path)
-
-# Force an account from any directory. The shim is called by path, so PATH
-# order cannot matter.
-claude-work()     { CC_ACCOUNT=work     "$HOME/.local/share/claude-switch/bin/claude" "$@"; }
-claude-personal() { CC_ACCOUNT=personal "$HOME/.local/share/claude-switch/bin/claude" "$@"; }
-# Resync without relaunching; exits non-zero and says why if a pull was
-# skipped (held lock, missing .claude.json, no jq).
-claude-sync() {
-  CC_SYNC_ONLY=1 "$HOME/.local/share/claude-switch/bin/claude" \
-    && print "claude-sync: assets linked, MCP servers unioned both ways"
-}
-# Remove a user-scope MCP server from BOTH accounts — the launch-time union
-# would re-add a one-sided removal. To edit a server: remove it here, then
-# `claude mcp add -s user …` once; the add propagates.
-claude-mcp-rm() {
-  local s="$HOME/.local/share/claude-switch/bin/claude" n
-  for n in "$@"; do
-    CC_ACCOUNT=personal "$s" mcp remove -s user "$n" || print -u2 "claude-mcp-rm: personal: could not remove '$n'"
-    CC_ACCOUNT=work     "$s" mcp remove -s user "$n" || print -u2 "claude-mcp-rm: work: could not remove '$n'"
-  done
-}
-
 # ── Editor ─────────────────────────────────────────────────
 # Here, not .zshrc: `git commit`, `git rebase -i` and visudo read $EDITOR
 # from whatever spawned them. --wait is load-bearing — without it git sees

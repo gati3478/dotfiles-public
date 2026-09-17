@@ -1,0 +1,18 @@
+# The hosts, first. ssh takes the FIRST value it obtains for an option, so
+# a host's own file only wins from above this one; an Include that matches
+# no file is skipped without a word, which is a fresh clone. Coming from a
+# config of your own: move it to ~/.ssh/config.local and every line in it
+# still wins. config.example has the patterns.
+Include ~/.ssh/config.local
+
+# Every key-based host signs through a password manager's SSH agent (here
+# Proton Pass). Each host's IdentityFile is the .pub: with IdentitiesOnly that
+# selects exactly one agent key per host, which matters once several keys
+# share one agent — GitHub, for one, identifies the account by the first
+# key it accepts. IdentityAgent here rather than SSH_AUTH_SOCK in a shell
+# file, because Dock-launched apps never read .zshrc and every ssh binary
+# reads this. A key the agent does not hold fails loud ("Permissions 0644 …
+# too open … Permission denied"): ssh tries the .pub as a private key and
+# never opens a private file beside it.
+Host *
+  IdentityAgent ~/.ssh/proton-pass-ssh-agent.sock
