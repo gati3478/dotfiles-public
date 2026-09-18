@@ -127,6 +127,11 @@ PROSE, PROSE_ABSENT = _prose_path()
 # the word "declared". In the mirror it is prompt/README.md — the same two
 # layouts the spec has, so it is found the same way.
 PUBLISHED = os.environ.get("PREF_PUBLISHED") or _shipped("prompt", "README.md")
+# The kitty drop-in's page carries the palette too, read off the theme file that
+# ships beside it — so it is held to that file as well as to the spec. Checked
+# only when the prompt page is the repo's own: a fixture must not drag it in.
+PUBLISHED_THEME_PAGE = None if os.environ.get("PREF_PUBLISHED") else _shipped("terminal", "kitty", "README.md")
+SHIPPED_THEME = _shipped("terminal", "kitty", "current-theme.conf")
 
 # Which tables several files may CONTRIBUTE to, by their path from the document
 # root. `*` is any name. Everything not listed is atomic: a whole [targets.N], a
@@ -3014,6 +3019,8 @@ def emit_published_palette_correspondence(spec, targets):
                          "moved the spec and left the published heading behind")
             failed = 1
 
+    failed |= _theme_page_correspondence(asserted, theme)
+
     # The model-family colours are a second published copy, of cship.toml rather
     # than of this spec. Same failure mode, and there is now a reader for it.
     cship = targets.get("cship")
@@ -3042,6 +3049,43 @@ def emit_published_palette_correspondence(spec, targets):
                     emit("fail", f"published palette: {name} says {family} is {hexval}, "
                                  f"cship.toml says '{live}'")
                     failed = 1
+    return failed
+
+
+def _theme_page_correspondence(asserted, theme):
+    """The kitty drop-in's palette tables against the spec and the theme file.
+
+    The page says its tables are read off current-theme.conf, and both ship, so
+    a hex on the page that the file does not carry is a stale copy — the same
+    failure the prompt page had before 25-08-2026, one directory over. Returns
+    1 on a mismatch, 0 otherwise and when the page is not there to check.
+    """
+    if not PUBLISHED_THEME_PAGE or not os.path.isfile(PUBLISHED_THEME_PAGE):
+        return 0
+    with open(PUBLISHED_THEME_PAGE, encoding="utf-8") as fh:
+        text = fh.read()
+    name = "terminal/kitty/README.md"
+    failed = 0
+    table = {h.lower() for h in ANY_HEX.findall(text)}
+    missing = sorted(asserted - table)
+    if missing:
+        emit("fail", f"published palette: {name}'s tables are missing {', '.join(missing)}")
+        failed = 1
+    else:
+        emit("ok", f"published palette: {name}'s tables carry every asserted hex")
+    if os.path.isfile(SHIPPED_THEME):
+        with open(SHIPPED_THEME, encoding="utf-8") as fh:
+            shipped = {h.lower() for h in ANY_HEX.findall(fh.read())}
+        stale = sorted(table - shipped)
+        if stale:
+            emit("fail", f"published palette: {name} lists {', '.join(stale)}, which "
+                         "current-theme.conf beside it does not carry — the table is read off that file")
+            failed = 1
+        else:
+            emit("ok", f"published palette: every hex on {name} is in current-theme.conf")
+    if isinstance(theme, str) and theme not in text:
+        emit("fail", f"published palette: {name} does not name '{theme}'")
+        failed = 1
     return failed
 
 

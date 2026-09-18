@@ -3,9 +3,9 @@
 A three-line statusline for [Claude Code](https://claude.com/claude-code),
 rendered by [cship](https://github.com/stephenleo/cship): where you are,
 whose session it is and which model, how much of the context and the budget
-is gone, and when the usage windows reset. This directory is self-contained —
-take it alone. Nothing else in this repository is needed, and nothing it
-installs points back here.
+is gone, and when the usage windows reset. Take it alone: the installer fetches
+one shared helper from this repository the way it fetches the configs, and
+nothing it installs points back here.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────────┐

@@ -18,6 +18,8 @@ defaults — starship.toml left alone, the account module hidden:
   --account-label NAME | --no-account   what line 2 calls your account, or
                                         hide the module in your copy
 
+--dry-run prints what the run would touch and stops, having written nothing.
+
 Nothing is overwritten without a timestamped backup beside it. A statusLine
 entry that runs anything but cship is left alone. A re-run with nothing
 changed rewrites nothing. Every refusal comes before the first write.
@@ -26,24 +28,60 @@ EOF
 }
 set -euo pipefail
 
-SOURCE_URL="${PROMPT_SOURCE:-https://raw.githubusercontent.com/gati3478/preen/main/prompt}"
+# --help answers with no network, so it is read before the helper is fetched.
+for arg in "$@"; do case "$arg" in -h|--help) usage; exit 0 ;; esac; done
+
+# ── the shared helper ────────────────────────────────────────────────────────
+# The generic half of every drop-in installer here: the questions, the source
+# resolution, the copies and their backup rule. Beside this script in a clone;
+# otherwise fetched from the mirror exactly as the configs are — same trust,
+# same mechanism — and checked for its marker line before it is sourced.
+PIECE="prompt"   # this piece's path under the mirror root
+ROOT_URL="${PREEN_SOURCE:-https://raw.githubusercontent.com/gati3478/preen/main}"
+SOURCE_URL="${PROMPT_SOURCE:-$ROOT_URL/$PIECE}"
+# PROMPT_SOURCE names this piece's directory and the helper sits a level above
+# it, so an override takes the root with it instead of leaving it on the mirror.
+if [ -n "${PROMPT_SOURCE:-}" ] && [ -z "${PREEN_SOURCE:-}" ]; then ROOT_URL="${SOURCE_URL%/*}"; fi
+
+SELF_DIR=""
+if [ -n "${BASH_SOURCE[0]:-}" ]; then SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || SELF_DIR=""; fi
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+
+# Beside this script in either tree — `lib/` in the mirror, `public/lib/` in the
+# private one — else fetched from the root the configs come from. Never the
+# directory the shell happens to be standing in.
+LIB=""
+candidate="$SELF_DIR/../lib/install.sh"
+if [ -f "$candidate" ] && grep -q '^PREEN_INSTALL_LIB=1$' "$candidate"; then LIB="$candidate"; fi
+if [ -z "$LIB" ]; then
+  LIB="$WORK/lib.sh"
+  curl -fsSL "$ROOT_URL/lib/install.sh" -o "$LIB" 2>/dev/null || { echo "install.sh: could not fetch $ROOT_URL/lib/install.sh" >&2; exit 1; }
+  grep -q '^PREEN_INSTALL_LIB=1$' "$LIB" || { echo "install.sh: $ROOT_URL/lib/install.sh is not the shared installer helper" >&2; exit 1; }
+  # A download cut off past the marker line passes the check above and then
+  # fails to parse — and a parse failure inside `source` is masked to exit 0 by
+  # the EXIT trap, so `curl … | bash && echo installed` would print installed.
+  bash -n "$LIB" 2>/dev/null || { echo "install.sh: $ROOT_URL/lib/install.sh did not arrive whole — try again" >&2; exit 1; }
+fi
+# shellcheck source=../lib/install.sh
+. "$LIB"
+
 CSHIP_FLOOR="1.8.2"   # per-window usage tokens and CSHIP_ACCOUNT arrived here
 REFRESH_SECONDS=60    # re-render on a timer, so the clock and windows move while idle
 CONFIG_DIR="$HOME/.config"
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"   # Claude Code's own override for where settings.json lives
 SETTINGS="$CLAUDE_DIR/settings.json"
-STAMP="$(date +%Y%m%d-%H%M%S)"
-
-die() { echo "install.sh: $*" >&2; exit 1; }
 
 with_starship=""
 account_mode=""
 account_label=""
+dry_run=no
 while [ $# -gt 0 ]; do
   case "$1" in
     --with-starship) with_starship=yes ;;
     --no-starship)   with_starship=no ;;
     --no-account)    account_mode=hide ;;
+    --dry-run)       dry_run=yes ;;
     --account-label)
       # `-*`, not `--*`: the guard exists to catch a forgotten name followed
       # by a flag, and reading only long flags let `--account-label -x` take
@@ -54,7 +92,6 @@ while [ $# -gt 0 ]; do
       account_label="$1"
       account_mode=label
       ;;
-    -h|--help) usage; exit 0 ;;
     *) die "unknown argument: $1 (see --help)" ;;
   esac
   shift
@@ -71,53 +108,11 @@ if [ "$account_mode" = label ] && ! label_ok "$account_label"; then
   die "--account-label: a name of letters, digits, space, '.', '_', '-' (or say --no-account)"
 fi
 
-# Piped from curl, stdin is the script; questions go through the terminal
-# itself, if there is one.
-interactive=no
-if (: </dev/tty) 2>/dev/null; then interactive=yes; fi
-ask() { # ask <prompt> → the line typed, possibly empty
-  printf '%s' "$1" >/dev/tty
-  IFS= read -r reply </dev/tty || reply=""
-  printf '%s' "$reply"
-}
-
-# bash 3.2 (macOS) keeps the backslash in a `${x/#$HOME/\~}` replacement, so
-# the ~ is spelled by hand.
-short() {
-  case "$1" in
-    "$HOME"|"$HOME"/*) printf '~%s' "${1#"$HOME"}" ;;
-    *) printf '%s' "$1" ;;
-  esac
-}
-# The command lands in settings.json and runs through a shell, so a path with
-# a space in it is quoted — and only such a path, so the usual case reads bare.
-sq() {
-  case "$1" in
-    *[!A-Za-z0-9._/-]*) printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")" ;;
-    *) printf '%s' "$1" ;;
-  esac
-}
-
 # ── where the configs come from ──────────────────────────────────────────────
-# Beside this script when run from a clone; otherwise fetched from the mirror,
-# each file when it is needed.
-WORK="$(mktemp -d)"
-trap 'rm -rf "$WORK"' EXIT
-fetch() { curl -fsSL "$SOURCE_URL/$1" -o "$SRC/$1" && [ -s "$SRC/$1" ] || die "could not fetch $SOURCE_URL/$1"; }
-SRC=""
-if [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/cship.toml" ]; then
-  SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  origin="$(short "$SRC")"
-else
-  SRC="$WORK/src"
-  origin="$SOURCE_URL"
-  mkdir -p "$SRC"
-  echo "== fetching from $SOURCE_URL =="
-  fetch cship.toml
-fi
+locate_sources cship.toml
 # curl -f already refuses a 404; this refuses a 200 that is not the file, and
 # an empty or foreign file beside a clone.
-{ [ -s "$SRC/cship.toml" ] && grep -q '^\[cship\]' "$SRC/cship.toml"; } || die "$origin/cship.toml is not a cship config"
+{ [ -s "$SRC/cship.toml" ] && grep -q '^\[cship\]' "$SRC/cship.toml"; } || die "$ORIGIN/cship.toml is not a cship config"
 
 # ── dependencies ─────────────────────────────────────────────────────────────
 echo "== dependencies =="
@@ -138,7 +133,6 @@ cship_version="$("$cship_bin" --version 2>/dev/null | awk '{ print $2 }')"
 # comparison below would sort `v1.9.0` under `1.8.2` and refuse every
 # install — telling an adopter their NEWER cship is too old.
 cship_version="${cship_version#v}"
-version_ge() { [ "$(printf '%s\n%s\n' "$1" "$2" | sort -t. -k1,1n -k2,2n -k3,3n | tail -1)" = "$1" ]; }
 if [ -z "$cship_version" ] || ! version_ge "$cship_version" "$CSHIP_FLOOR"; then
   die "cship $cship_version at $cship_bin — this config needs $CSHIP_FLOOR or newer"
 fi
@@ -215,7 +209,7 @@ esac
 # ── the two questions ────────────────────────────────────────────────────────
 if [ -z "$with_starship" ]; then
   with_starship=no
-  if [ "$interactive" = yes ]; then
+  if [ "$INTERACTIVE" = yes ]; then
     echo
     echo "== starship =="
     echo "starship.toml here styles line 1 — and, because starship reads one file, your shell prompt."
@@ -225,7 +219,7 @@ if [ -z "$with_starship" ]; then
 fi
 if [ -z "$account_mode" ]; then
   account_mode=hide
-  if [ "$interactive" = yes ]; then
+  if [ "$INTERACTIVE" = yes ]; then
     echo
     echo "== account label =="
     echo "Line 2 names the account a session runs under. Left to itself the module shows the"
@@ -257,14 +251,6 @@ done
 if [ "$with_starship" = yes ] && [ "$SRC" = "$WORK/src" ]; then fetch starship.toml; fi
 
 # ── the copies ───────────────────────────────────────────────────────────────
-backup_name() { # backup_name <file> → a name beside it that nothing holds yet
-  local b="$1.pre-dotfiles.$STAMP" n=1
-  while [ -e "$b" ] || [ -L "$b" ]; do
-    b="$1.pre-dotfiles.$STAMP.$n"
-    n=$((n + 1))
-  done
-  printf '%s' "$b"
-}
 # The copy is the source byte for byte, or with the account hidden: cship's
 # own switch under [cship.account], and the module's slot dropped — the space
 # that separated it from $cship.model would otherwise stay as a blank cell on
@@ -276,26 +262,19 @@ prepare_copy() { # prepare_copy <source> <copy> hide|keep
     /^\[cship\.account\][[:space:]]*(#.*)?$/ { header++; print; if (mode == "hide") print "disabled = true"; next }
     { slot += gsub(/\$cship\.account /, (mode == "hide") ? "" : "&"); print }
     END { if (header != 1 || slot != 1) exit 1 }
-  ' "$1" > "$2" || die "$origin/cship.toml is not the shape this installer knows — [cship.account] and its slot in lines must each appear once"
+  ' "$1" > "$2" || die "$ORIGIN/cship.toml is not the shape this installer knows — [cship.account] and its slot in lines must each appear once"
 }
-# A file is materialised as it should land, then compared with what is there:
-# identical is left untouched, so a re-run backs up nothing. A symlink in the
-# way is moved aside, link and all, even to identical content — the file is
-# being replaced, and writing through the link would overwrite whatever it
-# points at, a repo of yours say. settings.json is the other case: one key
-# merged into a file Claude Code itself rewrites in place, so a symlink there
-# is written through and its backup is a copy beside the link.
-place() { # place <materialised> <destination>
-  local src="$1" dst="$2" bak
-  if [ -e "$dst" ] || [ -L "$dst" ]; then
-    if [ ! -L "$dst" ] && cmp -s "$src" "$dst"; then echo "unchanged       $(short "$dst")"; return; fi
-    bak="$(backup_name "$dst")"
-    mv "$dst" "$bak"
-    echo "backed up       $(short "$dst") -> $(short "$bak")"
-  fi
-  cp "$src" "$dst"
-  echo "copied          $(short "$dst")"
-}
+
+# ── what this run will touch, said before the first write ────────────────────
+touching "$CONFIG_DIR/cship.toml" "the statusline's config"
+if [ "$with_starship" = yes ]; then touching "$CONFIG_DIR/starship.toml" "line 1, and your shell prompt with it"; fi
+case "$settings_state" in absent|cship) touching "$SETTINGS" "the statusLine entry" ;; esac
+show_plan
+if [ "$dry_run" = yes ]; then
+  echo
+  echo "Nothing was written. Drop --dry-run to do it."
+  exit 0
+fi
 
 echo
 echo "== copying =="
@@ -318,6 +297,9 @@ if [ "$account_mode" = label ]; then
   command="CSHIP_ACCOUNT='{\"organization_name\":\"$account_label\"}' $command"
 fi
 manual_entry="\"statusLine\": { \"type\": \"command\", \"command\": \"${command//\"/\\\"}\", \"refreshInterval\": $REFRESH_SECONDS }"
+# settings.json is not placed the way the configs are: it is one key merged into
+# a file Claude Code itself rewrites in place, so a symlink here is written
+# through and its backup is a copy beside the link.
 wire() { # back up the file if there is one, set statusLine, keep every other key
   local bak through=""
   if [ -f "$SETTINGS" ]; then

@@ -9,9 +9,13 @@ rows), and nothing beyond this is coming.
 **Want one piece, not the setup?** A directory here with its own `README.md`
 and `install.sh` can be taken alone: the script copies that directory's files
 into your config — copies, never symlinks — and wires the one entry that
-makes the tool read them; its page says exactly what it touches. Today that
-is [`prompt/`](prompt/README.md), the Claude Code statusline. Everything else
-installs as one setup, through `bin/bootstrap` under Install below.
+makes the tool read them; its page says exactly what it touches, and it
+touches nothing it does not print first. Today that is
+[`prompt/`](prompt/README.md), the Claude Code statusline, and
+[`terminal/kitty/`](terminal/kitty/README.md), the terminal's look. Both
+installers fetch one shared helper, `lib/install.sh`, the way they fetch the
+configs. Everything else installs as one setup, through `bin/bootstrap` under
+Install below.
 
 > This repo was **`osaka-jade`** until 15-08-2026 — a name that pinned a
 > palette allowed to change, and it changed — and **`dotfiles-public`** until
@@ -62,7 +66,7 @@ anyone taking that directory alone.
 | Directory         | Holds                                                                                                                                                                                                                                                                                                                                                       |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `shell/`          | zsh in three files split by cost — `zshenv` (every shell), `zprofile` (per login), `zshrc` (interactive). History that searches by real prefix, mise-managed runtimes, fzf + zoxide + eza + atuin (its config under `atuin/`), autosuggestions and syntax highlighting, an `inputrc` for the readline tools, and an empty `hushlogin` so a new tab opens at the prompt rather than under the login banner |
-| `terminal/kitty/` | kitty — the palette as its own included `current-theme.conf`, the typeface with ligatures, the caret, copy-on-select, scrollback paged through `bat`, a silent bell, and the click half of the shell seam: `open-actions.conf` plus a `mime.types` for the extensions Python's table gets wrong, and `choose-files.conf` so the keyboard file picker agrees with the shell about which files exist |
+| `terminal/kitty/` | **Stands alone — take it by itself.** kitty — the palette as its own included `current-theme.conf`, the typeface with ligatures, the caret, copy-on-select, scrollback paged through `bat`, a silent bell, and the click half of the shell seam: `open-actions.conf` plus a `mime.types` for the extensions Python's table gets wrong, and `choose-files.conf` so the keyboard file picker agrees with the shell about which files exist. `terminal/kitty/README.md` is its own page and `terminal/kitty/install.sh` its own installer |
 | `terminal/tmux/`  | tmux for SSH — true colour through the overrides, mouse on, a deep history, resurrect/continuum                                                                                                                                                                                                                                                              |
 | `terminal/bat/`   | one line, so `bat` rides the terminal's palette instead of carrying its own                                                                                                                                                                                                                                                                                 |
 | `terminal/ncdu/`  | one setting, so ncdu draws in the terminal's palette                                                                                                                                                                                                                                                                                                          |
@@ -76,6 +80,7 @@ anyone taking that directory alone.
 | `ssh/`            | `config` — one `Include ~/.ssh/config.local` on its first line, then the `Host *` agent line; ssh keeps the first value it reads, so your own config, moved to `config.local`, wins every line. `config.example` is the ControlMaster/tunnel pattern for that file, sanitised — the real one names live hosts and is private |
 | `macos/`          | `apply.sh` — the settings System Settings owns, written with `defaults`: appearance, Dock, hot corners, Finder, trackpad, spelling, languages, screenshots, the clock, Stage Manager, Siri. **Not a manifest row and not run by `bootstrap`**: it is the author's taste for a whole Mac, applied in one go. Read it before running it; it restarts the Dock and Finder, and prints the one root step rather than running it |
 | `bin/`            | `bootstrap`, the two verbs — `dot-apply` and `dot-doctor` — and under `lib/` what `dot-doctor` runs: the mirror's currency fingerprint, the preference checker (`pref-check.py`, python ≥ 3.11, and the shell shim that sources it) and the live-shell probe it runs beside itself |
+| `lib/`            | `install.sh` — the half the two drop-in installers share: where a piece's files come from, how a file is placed and backed up, the plan before the first write. Not run on its own |
 | `preferences.toml` | the taste as assertions — each preference's `value` and `why`, and the rows that check it against live config. No manifest row: nothing deploys it, `dot-doctor --taste` reads it where it sits |
 
 Not included, because it is not shareable: the IntelliJ IDEA config (several of
