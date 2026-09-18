@@ -1645,13 +1645,9 @@ want_any_contain = "hosts $_ssh_config_hosts"
 
 # The text row above holds with the list EMPTY: on 17-09-2026 the named hosts
 # moved to ~/.ssh/config.local, the parse still read ~/.ssh/config alone, and
-# the style resolved to no hosts — completion off, every row green. `hosts g`
-# is the resolved style carrying a first host; an empty list ends at `hosts`.
-[pref.completion_style.targets.zsh_live_ssh_hosts]
-target = "zsh_live"
-key = "zstyle"
-accumulate = true
-want_any_contain = "):*' hosts g"
+# the style resolved to no hosts — completion off, every row green. The live
+# row that catches it names a host's first ssh alias, so it is the host's:
+# hosts/mac/preferences.toml, zsh_live_ssh_hosts.
 
 # The 02-09-2026 adoptions (zshcompsys, third pass). Shift+Tab walks the
 # menu backwards in BOTH keymaps — kitty sends ESC [ Z (terminfo kcbt), and
