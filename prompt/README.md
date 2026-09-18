@@ -260,9 +260,10 @@ Haiku `#b8bb26`. The table is the whole theme; `background`, `bg1` and
 
 `cship.toml` and `starship.toml` are the author's live configuration,
 published verbatim. Their comments cite files of the private source
-repository — `preferences.toml`, `preferences.md`, `docs/blocked-upstream.md`
-— that hold the reasoning behind a few values. This page carries what an
-adopter needs; those comments are context, not instructions.
+repository — `preferences.md`, `docs/blocked-upstream.md` — that hold the
+reasoning behind a few values, and `preferences.toml`, which ships with the
+whole setup but not with this directory. This page carries what an adopter
+needs; those comments are context, not instructions.
 
 ## License
 

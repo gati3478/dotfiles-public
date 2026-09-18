@@ -37,21 +37,22 @@ throughout. The names are in the config files — kitty's theme is its own
 included file, so a swap touches one file — and `prompt/README.md` carries the
 statusline's palette table.
 
-The private source repo goes one step further: a written statement of taste
-with a machine-checkable half that its `dot-doctor` asserts against the
-applications' live config on every run, and a record of what each application
-cannot reach. That machinery is not here. Its spec is one file and names the
-author's infrastructure beside the taste, so it stays private by ruling rather
-than by oversight. The `dot-doctor` shipped here runs the manifest rows and
-the semantic checks; the preference section is simply absent without its
-spec.
+The taste is also written down as assertions. `preferences.toml` states each
+preference once — what, and why — with rows a checker reads off the
+applications' _live_ config, and records what each application cannot reach.
+`./bin/dot-doctor --taste` runs them against yours. It is the author's taste,
+so the plain `dot-doctor` never asserts it: it checks the manifest rows and
+the semantic checks, and a correct setup of your own is not failed over
+someone else's preferences.
 
 **Comments here name things that are not here.** These files are the private
 repo's own, published unedited, so their comments cite its pages
 (`docs/preferences.md`, `docs/traps.md`, `decisions.md`), its tooling
 (`dot-publish`, `dot-pull`, `publish/deny.txt`) and its internal task numbers.
 Nothing in this repository reads any of them and nothing breaks without them —
-they are context for the author, not instructions for you. Where one appeared
+`dot-doctor --taste` notes the one it would cross-check against, the prose
+half of the taste, and carries on — they are context for the author, not
+instructions for you. Where one appeared
 in a message meant for *you* to act on, that message has been rewritten.
 `prompt/README.md` says the same about `cship.toml` and `starship.toml` for
 anyone taking that directory alone.
@@ -74,12 +75,13 @@ anyone taking that directory alone.
 | `mise/`           | `config.toml` — the runtime manager's global pins, a node and a python, so a shell has both without a per-project file. The shell config activates mise; this is the file it reads |
 | `ssh/`            | `config` — one `Include ~/.ssh/config.local` on its first line, then the `Host *` agent line; ssh keeps the first value it reads, so your own config, moved to `config.local`, wins every line. `config.example` is the ControlMaster/tunnel pattern for that file, sanitised — the real one names live hosts and is private |
 | `macos/`          | `apply.sh` — the settings System Settings owns, written with `defaults`: appearance, Dock, hot corners, Finder, trackpad, spelling, languages, screenshots, the clock, Stage Manager, Siri. **Not a manifest row and not run by `bootstrap`**: it is the author's taste for a whole Mac, applied in one go. Read it before running it; it restarts the Dock and Finder, and prints the one root step rather than running it |
-| `bin/`            | `bootstrap`, the two verbs — `dot-apply` and `dot-doctor` — and under `lib/` the one helper `dot-doctor` sources |
+| `bin/`            | `bootstrap`, the two verbs — `dot-apply` and `dot-doctor` — and under `lib/` what `dot-doctor` runs: the mirror's currency fingerprint, the preference checker (`pref-check.py`, python ≥ 3.11, and the shell shim that sources it) and the live-shell probe it runs beside itself |
+| `preferences.toml` | the taste as assertions — each preference's `value` and `why`, and the rows that check it against live config. No manifest row: nothing deploys it, `dot-doctor --taste` reads it where it sits |
 
 Not included, because it is not shareable: the IntelliJ IDEA config (several of
 its option files name an employer, so the whole tree is treated as private),
-the real SSH config, local git identity, personal scripts, and the preference
-machinery described above.
+the real SSH hosts, local git identity, personal scripts, the spec's rows
+about the author's own machines, and the prose that argues each preference.
 
 ## Install
 

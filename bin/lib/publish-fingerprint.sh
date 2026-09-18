@@ -2,8 +2,9 @@
 #
 # dot-doctor's currency check used to hash only `HEAD:public`, but
 # dot-publish also stages LICENSE, docs/public-README.md, bin/dot-apply,
-# bin/dot-doctor, and manifest.tsv (the source manifest.tsv drives the
-# generated, public-only one dot-publish writes into the mirror). A change
+# bin/dot-doctor, the preference checker, and manifest.tsv (the source
+# manifest.tsv drives the generated, public-only one dot-publish writes
+# into the mirror). A change
 # to any of those changes what ships without touching public/ at all, so
 # hashing HEAD:public alone can say "current" while the mirror is stale.
 # Single-sourced so the writer (dot-publish) and the reader (dot-doctor)
@@ -26,5 +27,9 @@ publish_fingerprint() {
     # mirror is current" against a mirror that was not. Found 14-08-2026. The
     # self-reference is safe: this hashes the file's git blob, not its output.
     git -C "$repo" rev-parse HEAD:bin/lib/publish-fingerprint.sh 2>/dev/null || echo none
+    # The preference checker ships too; its spec is inside HEAD:public.
+    git -C "$repo" rev-parse HEAD:bin/lib/pref-check.py 2>/dev/null || echo none
+    git -C "$repo" rev-parse HEAD:bin/lib/pref-check.sh 2>/dev/null || echo none
+    git -C "$repo" rev-parse HEAD:bin/lib/zcap.sh 2>/dev/null || echo none
   } | shasum -a 256 | awk '{print $1}'
 }
